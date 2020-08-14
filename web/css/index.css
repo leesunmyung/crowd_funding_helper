@@ -53,6 +53,7 @@ body {
 	position: relative;
 	padding-left: 190px;
 	margin-bottom: 110px;
+  border: 0.05px solid gray;
 }
 
 .single_menu_list img {
@@ -79,7 +80,7 @@ body {
 }
 
 .single_menu_list h4 span {
-	float: right;
+	/*float: right;*/
 	font-weight: bold;
 	color: #FF5E18;
 	font-style: italic;
