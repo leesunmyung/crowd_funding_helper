@@ -43,7 +43,8 @@ class WadizCrawler:
         try:
             brand = brand[0]
         except:
-            brand = tree.xpath('//*[@id="container"]/div[4]/div/div[1]/div[1]/div[3]/div/div[1]/dl/dd/p/a/text()')
+            brand = tree.xpath('/html/body/div[3]/div[5]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[2]/div/div/div[1]/button/div[2]')
+            print(brand)
             try:
                 brand = brand[0]
             except:
@@ -170,12 +171,18 @@ class WadizCrawler:
             xpath ='/html/body/div[1]/main/div[2]/div/div[3]/div[2]/div[1]/div[%d]/div/div/a'%(i)
             url = driver.find_element_by_xpath(xpath)
             url = url.get_attribute('href')
+            html = driver.page_source
+            soup = BeautifulSoup(html, 'html.parser')
+
+            brand = soup.select('#main-app > div.MainWrapper_content__GZkTa > div > div.RewardProjectListApp_container__1ZYeD > div.ProjectCardList_container__3Y14k > div.ProjectCardList_list__1YBa2 > div:nth-child('+str(i)+') > div > div > div > div > div.RewardProjectCard_infoTop__3QR5w > div > span.RewardProjectCard_makerName__2q4oH')[0]
+            brand = brand.get_text()
+
             sql0 = "select * from wadiz_urllist where url=\'%s\'" % (url)
             curs.execute(sql0)
             rows = curs.fetchall()
             status = 'F'
             if len(rows)==0:
-                sql= "insert into wadiz_urllist(url, pagename, crawled) values (\'%s\',\'%s\',\'%s\')"%(url, pagename,status)
+                sql= "insert into wadiz_urllist(url, pagename, crawled, brand) values (\'%s\',\'%s\',\'%s\',\'%s\')"%(url, pagename,status, brand)
                 curs.execute(sql)
                 conn.commit()
 
@@ -207,11 +214,12 @@ class WadizCrawler:
             htmlparser = etree.HTMLParser()
             tree = etree.parse(response, htmlparser)
 
-
-
+            url = row[2]
+            print(url)
             category = tree.xpath('//*[@id="container"]/div[3]/p/em/text()')
             title = tree.xpath('//*[@id="container"]/div[3]/h2/a/text()')
-            brand = tree.xpath('//*[@id="reward-maker-info"]/text()')
+            brand = tree.xpath('//*[@id="reward-maker-info-2"]/div/div[1]/button/div[2]/text()')
+
             achieve = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[3]/strong/text()')
             funding = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[4]/strong/text()')
             supporter = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[5]/strong/text()')
@@ -229,7 +237,7 @@ class WadizCrawler:
 
             #print(category)
             #print(title)
-            print(brand) #안됨
+            #print(brand) #안됨
             #print(achieve)
             #print(funding)
             #print(supporter)
@@ -323,3 +331,32 @@ class WadizCrawler:
         else:
             print(url+"already exist")
         conn.close()
+
+def getBrand(self, url):
+#    conn = self.conn
+#    curs = conn.cursor()
+#
+#    sql = "select * from wadiz_urllist"
+#    curs.execute(sql)
+#    rows = curs.fetchall()
+
+    option = Options()
+    option.add_argument("--disable-infobars")
+    option.add_argument("start-maximized")
+    option.add_argument("--disable-extensions")
+
+        # Pass the argument 1 to allow and 2 to block
+    option.add_experimental_option("prefs", {
+    "profile.default_content_setting_values.notifications": 2
+    })
+    driver = webdriver.Chrome(options=option, executable_path=self.path + "\chromedriver.exe")
+    driver.get(url)
+
+    url = driver.find_element_by_xpath(xpath)
+    url = url.get_attribute('href')
+    self.driver.find_element_by_xpath('//*[@id="reward-maker-info"]/div/div[1]/button/div[2]').click()
+    self.driver.implicitly_wait(30)
+
+    response = urlopen(url)
+    htmlparser = etree.HTMLParser()
+    tree = etree.parse(response, htmlparser)
