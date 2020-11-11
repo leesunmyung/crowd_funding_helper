@@ -30,7 +30,7 @@ class WadizCrawler:
         self.path = os.path.dirname(os.path.realpath(__file__))
 
 
-    def extractCol(self,tree, category, title, brand,achieve, funding, supporter, likes, goal, period, remaining):
+    def extractCol(self,tree, category, title, achieve, funding, supporter, likes, goal, period, remaining):
 
         try:
             category = category[0]
@@ -40,15 +40,6 @@ class WadizCrawler:
             title = title[0]
         except:
             title = 'None'
-        try:
-            brand = brand[0]
-        except:
-            brand = tree.xpath('/html/body/div[3]/div[5]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[2]/div/div/div[1]/button/div[2]')
-            print(brand)
-            try:
-                brand = brand[0]
-            except:
-                brand = 'None'
         try:
             achieve = achieve[0]
         except:
@@ -85,7 +76,7 @@ class WadizCrawler:
             endate = period.split('-')[1].replace('.', '-')
         except:
             endate = 'None'
-        return category, title, brand,achieve, funding, supporter, likes, goal, period, remaining, stdate, endate
+        return category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate
 
     def cleansing(self, text):
         try:
@@ -218,7 +209,6 @@ class WadizCrawler:
             print(url)
             category = tree.xpath('//*[@id="container"]/div[3]/p/em/text()')
             title = tree.xpath('//*[@id="container"]/div[3]/h2/a/text()')
-            brand = tree.xpath('//*[@id="reward-maker-info-2"]/div/div[1]/button/div[2]/text()')
 
             achieve = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[3]/strong/text()')
             funding = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[4]/strong/text()')
@@ -258,11 +248,10 @@ class WadizCrawler:
             now = datetime.now()
             dtStr = now.strftime("%Y-%m-%d %H:%M:%S")
 
-            category, title, brand, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate = self.extractCol(tree, category, title, brand,achieve, funding, supporter, likes, goal, period, remaining)
+            category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate = self.extractCol(tree, category, title, achieve, funding, supporter, likes, goal, period, remaining)
 
             category = self.cleansing(category)
             title = self.cleansing(title)
-            brand = self.cleansing(brand)
             achieve = self.cleansing(achieve)
             funding = self.cleansing(funding)
             supporter = self.cleansing(supporter)
@@ -284,9 +273,9 @@ class WadizCrawler:
             if row[0][0]==0:
                 try:
                     if endate>nowday:
-                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, brand, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
+                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
                                                 value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
-                                                    %(id, pagename, category, title, brand, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, dtStr)
+                                                    %(id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, dtStr)
                         curs.execute(sql1)
                         conn.commit()
                         print('Crawling '+url+' finish',sql1)
@@ -297,10 +286,10 @@ class WadizCrawler:
                         conn.commit()
 
                     elif remaining=='펀딩성공':
-                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, brand, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
+                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
                                                                         value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
                                % (
-                               id, pagename, category, title, brand, achieve, funding, supporter, likes, goal, period,
+                               id, pagename, category, title, achieve, funding, supporter, likes, goal, period,
                                remaining, stdate, endate, dtStr)
                         curs.execute(sql1)
                         conn.commit()
@@ -311,10 +300,10 @@ class WadizCrawler:
                         curs.execute(sql_url)
                         conn.commit()
                     else:
-                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, brand, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
+                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
                                                                         value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
                                % (
-                               id, pagename, category, title, brand, achieve, funding, supporter, likes, goal, period,
+                               id, pagename, category, title, achieve, funding, supporter, likes, goal, period,
                                remaining, stdate, endate, dtStr)
                         curs.execute(sql1)
                         conn.commit()
@@ -331,32 +320,3 @@ class WadizCrawler:
         else:
             print(url+"already exist")
         conn.close()
-
-def getBrand(self, url):
-#    conn = self.conn
-#    curs = conn.cursor()
-#
-#    sql = "select * from wadiz_urllist"
-#    curs.execute(sql)
-#    rows = curs.fetchall()
-
-    option = Options()
-    option.add_argument("--disable-infobars")
-    option.add_argument("start-maximized")
-    option.add_argument("--disable-extensions")
-
-        # Pass the argument 1 to allow and 2 to block
-    option.add_experimental_option("prefs", {
-    "profile.default_content_setting_values.notifications": 2
-    })
-    driver = webdriver.Chrome(options=option, executable_path=self.path + "\chromedriver.exe")
-    driver.get(url)
-
-    url = driver.find_element_by_xpath(xpath)
-    url = url.get_attribute('href')
-    self.driver.find_element_by_xpath('//*[@id="reward-maker-info"]/div/div[1]/button/div[2]').click()
-    self.driver.implicitly_wait(30)
-
-    response = urlopen(url)
-    htmlparser = etree.HTMLParser()
-    tree = etree.parse(response, htmlparser)
