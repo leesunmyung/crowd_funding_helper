@@ -9,6 +9,12 @@ from lxml import etree
 import pymysql
 from datetime import datetime
 import re
+
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding = 'utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding = 'utf-8')
+
 ##########Wadiz crawling############
 #####Wadiz Reward 카테고리별 크롤링하기
 
@@ -31,16 +37,6 @@ class WadizCrawler:
             title = title[0]
         except:
             title = 'None'
-        """
-        try:
-            brand = brand[0]
-        except:
-            brand = tree.xpath('//*[@id="container"]/div[4]/div/div[1]/div[1]/div[3]/div/div[1]/dl/dd/p/a/text()')
-            try:
-                brand = brand[0]
-            except:
-                brand = 'None'
-        """
         try:
             achieve = achieve[0]
         except:
@@ -78,6 +74,7 @@ class WadizCrawler:
         except:
             endate = 'None'
         return category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate
+
     def cleansing(self, text):
         try:
             text = re.sub('[ㅣ,#/:$@*\"※&%ㆍ』\\‘|\(\)\[\]\<\>`\'…》]', '', text)
@@ -117,6 +114,7 @@ class WadizCrawler:
                 # print(text.count('\n\n'))
                 if text.count('\n\n') == 0:
                     break
+
             text = re.sub(u'[\u2500-\u2BEF]', '', text)  # I changed this to exclude chinese char
 
             # dingbats
@@ -151,7 +149,7 @@ class WadizCrawler:
         conn = self.conn
         curs = conn.cursor()
 
-        n_scrollDown = nUrl//38 + 2
+        n_scrollDown = nUrl//48 + 2
         k=0
         while k<n_scrollDown+1:
             k+=1
@@ -186,33 +184,9 @@ class WadizCrawler:
         conn.close()
 
     def getCrawler(self):
-        """
-        option = Options()
-
-        option.add_argument("--disable-infobars")
-        option.add_argument("start-maximized")
-        option.add_argument("--disable-extensions")
-
-        # Pass the argument 1 to allow and 2 to block
-        option.add_experimental_option("prefs", {
-        "profile.default_content_setting_values.notifications": 2
-        })
-
-        driver = webdriver.Chrome(options=option, executable_path=self.path + "\chromedriver.exe")
-        driver.get('https://www.wadiz.kr/web/wreward/main?keyword=&endYn=ALL&order=recent')
-        #login_button = driver.find_element_by_xpath('//*[@id="main-app"]/div[1]/div/header/div/div/div[2]/div/button[1]')
-        #login_button.click()
-
-        time.sleep(0.5)
-        putid = driver.find_element_by_xpath('//*[@id="userName"]')
-        putid.send_keys("vasana12@naver.com")
-        putpass = driver.find_element_by_xpath('//*[@id="password"]')
-        putpass.send_keys("ahfmsek2!")
-        login = driver.find_element_by_xpath('//*[@id="btnLogin"]')
-        login.click()
-        """
         conn = self.conn
         curs = conn.cursor()
+
         #크롤링 안된 url 가져오기
         sql = "select * from wadiz_urllist where crawled='F' or crawled='DB insert error'"
         curs.execute(sql)
@@ -220,13 +194,13 @@ class WadizCrawler:
 
         #크롤링이 안된 모든 행들에 대해서 실시
         for row in rows:
-
             # id, pagename, url 을 urllist 에서 가져온다
             id = row[0]
             pagename = row[1]
             url = row[2]
             if url == 'None':
                 continue
+
             # 해당 url 을 이용해서 requests 하고 요소들을 가져온다.
             response = urlopen(url)
             htmlparser = etree.HTMLParser()
@@ -234,12 +208,6 @@ class WadizCrawler:
 
             category = tree.xpath('//*[@id="container"]/div[3]/p/em/text()')
             title = tree.xpath('//*[@id="container"]/div[3]/h2/a/text()')
-            #brand = tree.xpath('//*[@id="reward-maker-info"]/div/div[1]/button/div[2]')
-            #brand = tree.getElementByClass("RewardMakerInfoBox_makerName__3TOmT").id();
-            #brand = tree.find("div", {"id":"reward-maker-info"})
-            #brand = tree.find("div", {"class":"RewardMakerInfoBox_makerName__3TOmT"})
-            #brand = tree.find_element_by_id("reward-maker-info")
-            #brand = tree.xpath('//*[@id="mypageWrap"]/div/div[1]/div/div/dl/dd/p[1]/text()')
 
             achieve = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[3]/strong/text()')
             funding = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[4]/strong/text()')
@@ -257,7 +225,7 @@ class WadizCrawler:
 
             #print(category)
             #print(title)
-            #print(brand) #안됨
+
             #print(achieve)
             #print(funding)
             #print(supporter)
@@ -283,7 +251,7 @@ class WadizCrawler:
 
             category = self.cleansing(category)
             title = self.cleansing(title)
-            #brand = self.cleansing(brand)
+
             achieve = self.cleansing(achieve)
             funding = self.cleansing(funding)
             supporter = self.cleansing(supporter)
@@ -296,7 +264,7 @@ class WadizCrawler:
                 # sql3 = "update wadiz_urllist set crawled='DB insert Error' where url=\'%s\'" % (url)
                 # curs.execute(sql3)
                 # conn.commit()
-                # print('first', id, pagename, category, title, brand, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, dtStr, url)
+                # print('first', id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, dtStr, url)
             # url 을 통해 가져온 내용들을 crawl 테이블에 저장한다.
             # id 를 통해
             sql0 = "select count(*) from wadiz_crawl where id = %d and remaining=\'%s\'"% (id, remaining)
