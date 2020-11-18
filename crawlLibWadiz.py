@@ -151,7 +151,7 @@ class WadizCrawler:
         conn = self.conn
         curs = conn.cursor()
 
-        n_scrollDown = nUrl//48 + 2
+        n_scrollDown = nUrl//38 + 2
         k=0
         while k<n_scrollDown+1:
             k+=1
