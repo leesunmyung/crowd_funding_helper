@@ -165,15 +165,15 @@ class WadizCrawler:
         k=0
         while k<n_scrollDown+1:
             k+=1
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(0.5)
             print(str(k)+"번 반복했습니다.")
 
         for i in range(1, nUrl+1):
             xpath ='/html/body/div[1]/main/div[2]/div/div[3]/div[2]/div[1]/div[%d]/div/div/a'%(i)
-            url = driver.find_element_by_xpath(xpath)
+            url = self.driver.find_element_by_xpath(xpath)
             url = url.get_attribute('href')
-            html = driver.page_source
+            html = self.driver.page_source
             soup = BeautifulSoup(html, 'html.parser')
 
             brand = soup.select('#main-app > div.MainWrapper_content__GZkTa > div > div.RewardProjectListApp_container__1ZYeD > div.ProjectCardList_container__3Y14k > div.ProjectCardList_list__1YBa2 > div:nth-child('+str(i)+') > div > div > div > div > div.RewardProjectCard_infoTop__3QR5w > div > span.RewardProjectCard_makerName__2q4oH')[0]
