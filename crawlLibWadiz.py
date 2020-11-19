@@ -4,7 +4,7 @@ from selenium.webdriver.chrome.options import Options
 import os
 from selenium import webdriver
 import time
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 from lxml import etree
 import pymysql
 from datetime import datetime
@@ -28,7 +28,18 @@ class WadizCrawler:
                                db='test', charset='utf8')
 
         self.path = os.path.dirname(os.path.realpath(__file__))
+        option = Options()
 
+        option.add_argument("--disable-infobars")
+        option.add_argument("start-maximized")
+        option.add_argument("--disable-extensions")
+
+        # Pass the argument 1 to allow and 2 to block
+        option.add_experimental_option("prefs", {
+        "profile.default_content_setting_values.notifications": 2
+        })
+        self.driver = webdriver.Chrome(options=option, executable_path=self.path + "\chromedriver.exe")
+        self.driver.get('https://www.wadiz.kr/web/wreward/main?keyword=&endYn=ALL&order=recent')
 
     def extractCol(self,tree, category, title, achieve, funding, supporter, likes, goal, period, remaining):
 
@@ -134,18 +145,18 @@ class WadizCrawler:
         return text
 
     def getUrlLister(self, pagename, page_url, nUrl):
-        option = Options()
+        #option = Options()
 
-        option.add_argument("--disable-infobars")
-        option.add_argument("start-maximized")
-        option.add_argument("--disable-extensions")
+        #option.add_argument("--disable-infobars")
+        #option.add_argument("start-maximized")
+        #option.add_argument("--disable-extensions")
 
-        # Pass the argument 1 to allow and 2 to block
-        option.add_experimental_option("prefs", {
-        "profile.default_content_setting_values.notifications": 2
-        })
-        driver = webdriver.Chrome(options=option, executable_path=self.path + "\chromedriver.exe")
-        driver.get(page_url)
+        ## Pass the argument 1 to allow and 2 to block
+        #option.add_experimental_option("prefs", {
+        #"profile.default_content_setting_values.notifications": 2
+        #})
+        #driver = webdriver.Chrome(options=option, executable_path=self.path + "\chromedriver.exe")
+        #driver.get(page_url)
 
         conn = self.conn
         curs = conn.cursor()
@@ -167,6 +178,8 @@ class WadizCrawler:
 
             brand = soup.select('#main-app > div.MainWrapper_content__GZkTa > div > div.RewardProjectListApp_container__1ZYeD > div.ProjectCardList_container__3Y14k > div.ProjectCardList_list__1YBa2 > div:nth-child('+str(i)+') > div > div > div > div > div.RewardProjectCard_infoTop__3QR5w > div > span.RewardProjectCard_makerName__2q4oH')[0]
             brand = brand.get_text()
+            brand = self.cleansing(brand)
+
 
             sql0 = "select * from wadiz_urllist where url=\'%s\'" % (url)
             curs.execute(sql0)
@@ -183,6 +196,9 @@ class WadizCrawler:
         #driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         conn.close()
     def getCrawler(self):
+
+
+
         conn = self.conn
         curs = conn.cursor()
 
@@ -200,7 +216,8 @@ class WadizCrawler:
             if url == 'None':
                 continue
             # 해당 url 을 이용해서 requests 하고 요소들을 가져온다.
-            response = urlopen(url)
+            req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            response = urlopen(req)
 
             htmlparser = etree.HTMLParser()
             tree = etree.parse(response, htmlparser)
@@ -274,20 +291,21 @@ class WadizCrawler:
                 try:
                     if endate>nowday:
                         sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
-                                                value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
+                                                value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
                                                     %(id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, dtStr)
                         curs.execute(sql1)
                         conn.commit()
+
                         print('Crawling '+url+' finish',sql1)
 
                         conn.commit()
-                        sql_url = "update wadiz_urllist set status='펀딩중', crawled='F' where id=\'%s\'"% (url)
+                        sql_url = "update wadiz_urllist set status='펀딩중', crawled='T' where url=\'%s\'"% (url)  #where id -> where url
                         curs.execute(sql_url)
                         conn.commit()
 
                     elif remaining=='펀딩성공':
                         sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
-                                                                        value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
+                                                                        value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
                                % (
                                id, pagename, category, title, achieve, funding, supporter, likes, goal, period,
                                remaining, stdate, endate, dtStr)
@@ -301,7 +319,7 @@ class WadizCrawler:
                         conn.commit()
                     else:
                         sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
-                                                                        value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
+                                                                        value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
                                % (
                                id, pagename, category, title, achieve, funding, supporter, likes, goal, period,
                                remaining, stdate, endate, dtStr)
@@ -317,6 +335,53 @@ class WadizCrawler:
                     curs.execute(sql0)
                     conn.commit()
                     print('second',sql0, url)
-        else:
-            print(url+"already exist")
+            else:
+                print(url+"already exist")
+            print("Get User Info")
+            #https://www.wadiz.kr/web/campaign/detail/72789
+            #https://www.wadiz.kr/web/campaign/detailBacker/72789
+            #self.driver.find_element_by_xpath('//*[@id="container"]/div[5]/ul/li[6]/a').click()
+            #https://www.wadiz.kr/web/campaign/detail/89918?acid=10004367&_refer_section_st=REWARD_6
+            if '?' in url:
+                replacedUrl = url.split('?')[0]
+            replacedUrl = url.replace('detail','detailBacker')
+            self.driver.get(replacedUrl)
+            self.driver.implicitly_wait(30)
+            print("replaced url: "+replacedUrl)
+            Num = self.driver.find_element_by_xpath('//*[@id="container"]/div[6]/div/div/div[1]/div[1]/div[1]/p[5]/strong')
+            self.driver.implicitly_wait(30)
+            supporterNum = Num.text
+
+#            self.driver.find_element_by_xpath('//*[@id="reward-static-supports-list-app"]/div/div/div/div[2]/button').click()
+            while True:
+#                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+#                time.sleep(0.5)
+                try:
+                    self.driver.find_element_by_xpath('//*[@id="reward-static-supports-list-app"]/div/div/div/div[2]/button').click()
+                    self.driver.implicitly_wait(30)
+                except:
+                    break;
+            """
+            조맹희 //*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[1]/div/p/button
+            24,500 //*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[1]/div/p/strong/text()[1]
+            전화석 //*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[2]/div/p/button
+            24,500 //*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[2]/div/p/strong/text()[1]
+            """
+
+            for i in range(1,int(supporterNum)+1):
+                user_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/button'%i
+                anonymous = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/strong[1]'%i
+                investment_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/strong'%i
+                self.driver.implicitly_wait(30)
+                try:
+                    user = self.driver.find_element_by_xpath(user_xpath).text
+                except:
+                    user = self.driver.find_element_by_xpath(anonymous).text
+                self.driver.implicitly_wait(30)
+                investment = self.driver.find_element_by_xpath(investment_xpath).text
+                self.driver.implicitly_wait(30)
+                if user != '익명의 서포터':
+                    sql= "insert into user_info(site, title, username, investment) values ('wadiz',\'%s\',\'%s\',\'%s\')"%(title,user, investment)
+                    curs.execute(sql)
+                    conn.commit()
         conn.close()
