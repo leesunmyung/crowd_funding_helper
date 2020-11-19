@@ -342,9 +342,15 @@ class WadizCrawler:
             #https://www.wadiz.kr/web/campaign/detailBacker/72789
             #self.driver.find_element_by_xpath('//*[@id="container"]/div[5]/ul/li[6]/a').click()
             #https://www.wadiz.kr/web/campaign/detail/89918?acid=10004367&_refer_section_st=REWARD_6
+            replacedUrl = url
+            #https://www.wadiz.kr/web/wcomingsoon/rwd/80556?acid=10004462&_refer_section_st=REWARD_12
+            #https://www.wadiz.kr/web/campaign/detailBacker/80556
             if '?' in url:
                 replacedUrl = url.split('?')[0]
-            replacedUrl = url.replace('detail','detailBacker')
+            if 'detail' in url:
+                replacedUrl = url.replace('detail','detailBacker')
+            if 'wcomingsoon' in url:
+                replacedUrl = url.replace('wcomingsoon/rwd','campaign/detailBacker')
             self.driver.get(replacedUrl)
             self.driver.implicitly_wait(30)
             print("replaced url: "+replacedUrl)
