@@ -19,6 +19,7 @@ class TumblbugCrawler:
                                db='test', charset='utf8')
 
         self.path = os.path.dirname(os.path.realpath(__file__))
+        print('DB connected')
 
     def getUrlLister(self, page_url, nUrl):
         option = Options()
@@ -32,29 +33,42 @@ class TumblbugCrawler:
         "profile.default_content_setting_values.notifications": 2
         })
         driver = webdriver.Chrome(options=option, executable_path=self.path + "\chromedriver.exe")
+        SCROLL_PAUSE_TIME = 4
+
         driver.get(page_url)
+        time.sleep(SCROLL_PAUSE_TIME)
 
         conn = self.conn
         curs = conn.cursor()
 
-        SCROLL_PAUSE_TIME = 2
-        # Get scroll height
-        last_height = driver.execute_script("return document.body.scrollHeight")
-        while True:
 
+        # Get scroll height
+#        last_height = driver.execute_script("return document.body.scrollHeight")
+        last_height = 0
+        while True:
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            #print('down')
             time.sleep(SCROLL_PAUSE_TIME)
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight-100);")
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight-1000);")
+            #print('up')
             time.sleep(SCROLL_PAUSE_TIME)
             new_height = driver.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
                 break
-            #last_height = new_height
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight-100);")
+            last_height = new_height
+            #driver.execute_script("window.scrollTo(0, document.body.scrollHeight-300);")
+#//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[1]/div/div/div[2]/a
+#//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[1]/div/div/dl/dt/a
+
+#//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[2]/div/div/div[3]/a
+#//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[2]/div/div/dl/dt/a
+
+#//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[3]/div/div/div[2]/a
+#//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[3]/div/div/dl/dt/a
 
 
         for i in range(1, nUrl+1):
-            xpath1 ='//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div['+str(i)+']/div/div/dl/dt/a'
+            xpath1 = '//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div['+str(i)+']/div/div/dl/dt/a'
             url = driver.find_element_by_xpath(xpath1)
             url = url.get_attribute('href')
             sql0 = "select * from tumblbug_urllist where url=\'%s\'" % (url)
