@@ -47,11 +47,11 @@ class TumblbugCrawler:
         last_height = 0
         while True:
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            #print('down')
             time.sleep(SCROLL_PAUSE_TIME)
-            print('down')
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight-1000);")
+            #print('up')
             time.sleep(SCROLL_PAUSE_TIME)
-            print('up')
             new_height = driver.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
                 break
