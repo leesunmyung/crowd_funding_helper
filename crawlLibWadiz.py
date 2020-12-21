@@ -27,7 +27,23 @@ class WadizCrawler:
 
         self.path = os.path.dirname(os.path.realpath(__file__))
 
-    def extractCol(self,tree, category, title, achieve, funding, supporter, likes, goal, period, remaining):
+        option = Options()
+
+        option.add_argument("--disable-infobars")
+        option.add_argument("start-maximized")
+        option.add_argument("--disable-extensions")
+
+        # Pass the argument 1 to allow and 2 to block
+        option.add_experimental_option("prefs", {
+        "profile.default_content_setting_values.notifications": 2
+        })
+
+        self.driver = webdriver.Chrome(options=option, executable_path=self.path+"\chromedriver.exe")
+        self.driver.implicitly_wait(3)
+        #self.driver.get('https://www.wadiz.kr/web/wreward/main?keyword=&endYn=ALL&order=recent')
+
+    def extractCol(self,tree, category, title, achieve, funding, supporter, likes, goal,
+    , remaining):
 
         try:
             category = category[0]
@@ -132,6 +148,7 @@ class WadizCrawler:
         return text
 
     def getUrlLister(self, pagename, page_url, nUrl):
+
         option = Options()
 
         option.add_argument("--disable-infobars")
@@ -143,30 +160,31 @@ class WadizCrawler:
         "profile.default_content_setting_values.notifications": 2
         })
 
-        driver = webdriver.Chrome(options=option, executable_path=self.path + "\chromedriver.exe")
-        driver.get(page_url)
+        self.driver = webdriver.Chrome(options=option, executable_path=self.path + "\chromedriver.exe")
+        self.driver.get(page_url)
 
         conn = self.conn
         curs = conn.cursor()
 
-        n_scrollDown = nUrl//48 + 2
+        n_scrollDown = nUrl//5 + 2
         k=0
         while k<n_scrollDown+1:
             k+=1
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(0.5)
             print(str(k)+"번 반복했습니다.")
 
         for i in range(1, nUrl+1):
             xpath ='/html/body/div[1]/main/div[2]/div/div[3]/div[2]/div[1]/div[%d]/div/div/a'%(i)
-            url = driver.find_element_by_xpath(xpath)
+            url = self.driver.find_element_by_xpath(xpath)
             url = url.get_attribute('href')
 
-            html = driver.page_source
+            html = self.driver.page_source
             soup = BeautifulSoup(html, 'html.parser')
 
             brand = soup.select('#main-app > div.MainWrapper_content__GZkTa > div > div.RewardProjectListApp_container__1ZYeD > div.ProjectCardList_container__3Y14k > div.ProjectCardList_list__1YBa2 > div:nth-child('+str(i)+') > div > div > div > div > div.RewardProjectCard_infoTop__3QR5w > div > span.RewardProjectCard_makerName__2q4oH')[0]
             brand = brand.get_text()
+            brand = self.cleansing(brand)
 
             sql0 = "select * from wadiz_urllist where url=\'%s\'" % (url)
             curs.execute(sql0)
@@ -184,6 +202,7 @@ class WadizCrawler:
         conn.close()
 
     def getCrawler(self):
+
         conn = self.conn
         curs = conn.cursor()
 
@@ -217,25 +236,15 @@ class WadizCrawler:
             likes = []
             likes.append(likes1)
             goal = tree.xpath(
-                '//*[@id="container"]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[5]/div/p[1]/text()[1]')
-
+                '//*[@id="container"]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[1]/div[1]/p[4]/strong/text()[1]')
             period = tree.xpath(
                 '//*[@id="container"]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[5]/div/p[1]/text()[2]')
+                #period에서 펀딩 기간을 가져와야하는데 목표 금액이 갖고 와짐..
             remaining = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[1]/text()')
 
-            #print(category)
-            #print(title)
-
-            #print(achieve)
-            #print(funding)
-            #print(supporter)
-            #print(likes)
-            #print(goal) #[' 2,500,000원 \xa0 \xa0 '] 이렇게 나오는데 문자열 정리해주는 함수(cleansing)에서 정리 되는지 확인해봐야함
-            #print(period)
-            #print(remaining, remaining[0])
 
             try:
-                if remaining[0] == '% 달성':  #remaining, remaining[0] 둘다 '4일남음' < 이런 식으로 나옴
+                if remaining[0] == '% 달성':
                     funding = tree.xpath(
                         '//*[@id="container"]/div[4]/div/div[1]/div[2]/div/div/section/div[4]/div/div[1]/div[1]/p[2]/strong/text()')
                     supporter = tree.xpath(
@@ -319,6 +328,53 @@ class WadizCrawler:
                     curs.execute(sql0)
                     conn.commit()
                     print('second',sql0, url)
+
+                print("Get User Info")
+
+                replacedUrl = url
+
+                if '?' in url:
+                    replacedUrl = url.split('?')[0]
+                if 'detail' in url:
+                    replacedUrl = url.replace('detail','detailBacker')
+                if 'wcomingsoon' in url:
+                    replacedUrl = url.replace('wcomingsoon/rwd','campaign/detailBacker')
+                self.driver.get(replacedUrl)
+                self.driver.implicitly_wait(30)
+                print("replaced url: "+replacedUrl)
+                Num = self.driver.find_element_by_xpath('//*[@id="container"]/div[6]/div/div/div[1]/div[1]/div[1]/p[5]/strong')
+                self.driver.implicitly_wait(30)
+                supporterNum = Num.text
+
+                while True:
+                    try:
+                        self.driver.find_element_by_xpath('//*[@id="reward-static-supports-list-app"]/div/div/div/div[2]/button').click()
+                        self.driver.implicitly_wait(30)
+                    except:
+                        print("user info except 들어옴");
+                        break;
+
+                for i in range(1,int(supporterNum)+1):
+                    user_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/button'%i
+                    anonymous = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/strong[1]'%i
+                    investment_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/strong'%i
+                    self.driver.implicitly_wait(30)
+                    try:
+                        user = self.driver.find_element_by_xpath(user_xpath).text
+                    except:
+                        user = self.driver.find_element_by_xpath(anonymous).text
+                    self.driver.implicitly_wait(30)
+                    investment = self.driver.find_element_by_xpath(investment_xpath).text
+                    self.driver.implicitly_wait(30)
+
+                    if user != '익명의 서포터' :
+                        user = self.cleansing(user)
+                        sql= "insert into wadiz_user_info(site, title, username, investment) values ('wadiz',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
+                        curs.execute(sql)
+                        conn.commit()
+                    else :
+                        continue
         else:
             print(url+"already exist")
+
         conn.close()
