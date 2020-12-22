@@ -42,8 +42,7 @@ class WadizCrawler:
         self.driver.implicitly_wait(3)
         #self.driver.get('https://www.wadiz.kr/web/wreward/main?keyword=&endYn=ALL&order=recent')
 
-    def extractCol(self,tree, category, title, achieve, funding, supporter, likes, goal,
-    , remaining):
+    def extractCol(self,tree, category, title, achieve, funding, supporter, goal, period, remaining):
 
         try:
             category = category[0]
@@ -61,35 +60,43 @@ class WadizCrawler:
             supporter = supporter[0]
         except:
             supporter = 'None'
+        """
         try:
             likes = likes[0]
         except:
             likes = 'None'
+        """
         try:
             funding = funding[0]
         except:
-            likes = 'None'
+            funding = 'None'
         try:
-            goal = goal[0].strip()
+            goal = goal[0][:-1]
         except:
             goal = 'None'
+
         try:
             period = period[0].strip()
         except:
             period = 'None'
+
         try:
             remaining = remaining[0]
+            #remaining = remaining[0][:-4]
+            #print(remaining)
         except:
             remaining = 'None'
+            """
         try:
             stdate = period.split('-')[0].replace('.', '-')
         except:
             stdate = 'None'
+            """
         try:
             endate = period.split('-')[1].replace('.', '-')
         except:
             endate = 'None'
-        return category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate
+        return category, title, achieve, funding, supporter, goal, period, remaining, endate
 
     def cleansing(self, text):
         try:
@@ -111,7 +118,6 @@ class WadizCrawler:
 
             while (True):
                 text = re.sub('\n \n ', '\n', text)
-                # print(text.count('\n \n '))
                 if text.count('\n \n ') == 0:
                     break
 
@@ -166,7 +172,7 @@ class WadizCrawler:
         conn = self.conn
         curs = conn.cursor()
 
-        n_scrollDown = nUrl//5 + 2
+        n_scrollDown = nUrl//48 + 2
         k=0
         while k<n_scrollDown+1:
             k+=1
@@ -231,14 +237,19 @@ class WadizCrawler:
             achieve = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[3]/strong/text()')
             funding = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[4]/strong/text()')
             supporter = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[5]/strong/text()')
-            likes1 = list(tree.xpath('//*[@id="cntLike"]/text()')[0])
-            likes1 = "".join(likes1)
-            likes = []
-            likes.append(likes1)
+            #likes1 = list(tree.xpath('//*[@id="cntLike"]/text()')[0])
+            #likes1 = "".join(likes1)
+            #likes = []
+            #likes.append(likes1)
             goal = tree.xpath(
-                '//*[@id="container"]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[1]/div[1]/p[4]/strong/text()[1]')
-            period = tree.xpath(
                 '//*[@id="container"]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[5]/div/p[1]/text()[2]')
+            #goal = goal[0][:-1]
+            #print(goal)
+            #print('goal=', goal[0])
+            #goal1 = goal[0][:-1]
+            #print('goal1=', goal1)
+            period = tree.xpath(
+                '//*[@id="container"]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[5]/div/p[1]/text()[4]')
                 #period에서 펀딩 기간을 가져와야하는데 목표 금액이 갖고 와짐..
             remaining = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[1]/text()')
 
@@ -256,7 +267,7 @@ class WadizCrawler:
             now = datetime.now()
             dtStr = now.strftime("%Y-%m-%d %H:%M:%S")
 
-            category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate = self.extractCol(tree, category, title,achieve, funding, supporter, likes, goal, period, remaining)
+            category, title, achieve, funding, supporter, goal, period, remaining, endate = self.extractCol(tree, category, title,achieve, funding, supporter, goal, period, remaining)
 
             category = self.cleansing(category)
             title = self.cleansing(title)
@@ -264,10 +275,11 @@ class WadizCrawler:
             achieve = self.cleansing(achieve)
             funding = self.cleansing(funding)
             supporter = self.cleansing(supporter)
-            likes = self.cleansing(likes)
+            #likes = self.cleansing(likes)
             goal = self.cleansing(goal)
             period = self.cleansing(period)
             remaining = self.cleansing(remaining)
+            #endate = self.cleansing(endate)
             nowday = now.strftime("%Y-%m-%d")
 
                 # sql3 = "update wadiz_urllist set crawled='DB insert Error' where url=\'%s\'" % (url)
@@ -276,16 +288,17 @@ class WadizCrawler:
                 # print('first', id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, dtStr, url)
             # url 을 통해 가져온 내용들을 crawl 테이블에 저장한다.
             # id 를 통해
-            sql0 = "select count(*) from wadiz_crawl where id = %d and remaining=\'%s\'"% (id, remaining)
+            sql0 = "select count(*) from wadiz_crawl where id = %d and remaining_day=\'%s\'"% (id, remaining)
 
             curs.execute(sql0)
             row = curs.fetchall()
             if row[0][0]==0:
                 try:
                     if endate>nowday:
-                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
-                                                value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
-                                                    %(id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, dtStr)
+                        remaining = remaining[:-4]
+                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, goal, remaining_day, endate)\
+                                                value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
+                                                    %(id, pagename, category, title, achieve, funding, supporter, goal, remaining, endate)
                         curs.execute(sql1)
                         conn.commit()
 
@@ -297,25 +310,24 @@ class WadizCrawler:
                         conn.commit()
 
                     elif remaining=='펀딩성공':
-                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
-                                                                        value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
+                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, goal, remaining_day, endate)\
+                                                                        value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
                                % (
-                               id, pagename, category, title, achieve, funding, supporter, likes, goal, period,
-                               remaining, stdate, endate, dtStr)
+                               id, pagename, category, title, achieve, funding, supporter, goal,
+                               remaining, endate)
                         curs.execute(sql1)
                         conn.commit()
-
                         print('Crawling ' + url + ' finish', sql1)
 
                         sql_url = "update wadiz_urllist set status='펀딩완료',crawled='T' where url=\'%s\'" % (url)
                         curs.execute(sql_url)
                         conn.commit()
                     else:
-                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, accesstime)\
-                                                                        value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
+                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, goal, remaining_day, endate)\
+                                                                        value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
                                % (
-                               id, pagename, category, title, achieve, funding, supporter, likes, goal, period,
-                               remaining, stdate, endate, dtStr)
+                               id, pagename, category, title, achieve, funding, supporter, goal,
+                               '0', endate)
                         curs.execute(sql1)
                         conn.commit()
                         print('Crawling ' + url + ' finish', sql1)
@@ -345,30 +357,52 @@ class WadizCrawler:
                 Num = self.driver.find_element_by_xpath('//*[@id="container"]/div[6]/div/div/div[1]/div[1]/div[1]/p[5]/strong')
                 self.driver.implicitly_wait(30)
                 supporterNum = Num.text
+                if len(supporterNum) >= 4 :
+                    supporterNum = supporterNum.strip().replace(',', '')
 
+                n = 1;
                 while True:
                     try:
                         self.driver.find_element_by_xpath('//*[@id="reward-static-supports-list-app"]/div/div/div/div[2]/button').click()
-                        self.driver.implicitly_wait(30)
-                    except:
-                        print("user info except 들어옴");
-                        break;
+                        n = n+1;
+                        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                        time.sleep(1)
+                        print("더보기", n, "번 누름")
 
-                for i in range(1,int(supporterNum)+1):
+                        self.driver.implicitly_wait(40)
+
+                    except:
+                        print("더보기 끝")
+                        break;
+                for i in range(1, int(supporterNum)+1):
                     user_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/button'%i
                     anonymous = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/strong[1]'%i
                     investment_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/strong'%i
                     self.driver.implicitly_wait(30)
+
                     try:
                         user = self.driver.find_element_by_xpath(user_xpath).text
                     except:
-                        user = self.driver.find_element_by_xpath(anonymous).text
+                        user = '익명의 서포터'
+
                     self.driver.implicitly_wait(30)
                     investment = self.driver.find_element_by_xpath(investment_xpath).text
                     self.driver.implicitly_wait(30)
 
-                    if user != '익명의 서포터' :
+                    if user != '익명의 서포터' and investment != '지지서명' and investment != '펀딩':
                         user = self.cleansing(user)
+                        investment = investment[:-4]
+                        sql= "insert into wadiz_user_info(site, title, username, investment) values ('wadiz',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
+                        curs.execute(sql)
+                        conn.commit()
+                    elif investment == '펀딩' :
+                        user = self.cleansing(user)
+                        if remaining == '펀딩성공' :
+                            defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[1]/div/dl/dt'
+                        else :
+                            defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button[1]/div/dl/dt'
+                        investment = self.driver.find_element_by_xpath(defaultoption_xpath).text
+                        investment = investment[:-4]
                         sql= "insert into wadiz_user_info(site, title, username, investment) values ('wadiz',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
                         curs.execute(sql)
                         conn.commit()
