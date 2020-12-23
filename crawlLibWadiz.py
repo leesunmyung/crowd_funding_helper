@@ -9,6 +9,7 @@ from lxml import etree
 import pymysql
 from datetime import datetime
 import re
+from selenium.webdriver import ActionChains
 
 import sys
 import io
@@ -363,17 +364,22 @@ class WadizCrawler:
                 n = 1;
                 while True:
                     try:
-                        self.driver.find_element_by_xpath('//*[@id="reward-static-supports-list-app"]/div/div/div/div[2]/button').click()
+                        more_xpath = self.driver.find_element_by_xpath('//*[@id="reward-static-supports-list-app"]/div/div/div/div[2]/button')
+
+                        action = ActionChains(self.driver).click()
+                        action.move_to_element(more_xpath).perform()
+                        #self.driver.find_element_by_xpath('//*[@id="reward-static-supports-list-app"]/div/div/div/div[2]/button').click()
                         n = n+1;
-                        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                        #self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                         time.sleep(1)
                         print("더보기", n, "번 누름")
-
-                        self.driver.implicitly_wait(40)
+                        self.driver.implicitly_wait(30)
 
                     except:
                         print("더보기 끝")
                         break;
+
+
                 for i in range(1, int(supporterNum)+1):
                     user_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/button'%i
                     anonymous = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/strong[1]'%i
