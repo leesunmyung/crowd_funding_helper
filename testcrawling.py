@@ -12,7 +12,10 @@ import pymysql
 from datetime import datetime
 import re
 
-
+import sys
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding = 'utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding = 'utf-8')
 
 class TumblbugCrawler:
     def __init__(self):
@@ -57,7 +60,7 @@ class TumblbugCrawler:
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             #print('down')
             time.sleep(SCROLL_PAUSE_TIME)
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight-1000);")
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight-800);")
             #print('up')
             time.sleep(SCROLL_PAUSE_TIME)
             new_height = self.driver.execute_script("return document.body.scrollHeight")
@@ -105,8 +108,63 @@ class TumblbugCrawler:
     #driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         #conn.close()
     def goToCommunityTab(self):
+        self.driver.find_element_by_xpath('//*[@id="contentsNavigation"]/nav/div/div/a[2]').click()
+        self.driver.implicitly_wait(30)
 
+    def cleansing(self, text):
+        try:
+            text = re.sub('[ㅣ,#/:$@*\"※&%ㆍ』\\‘|\(\)\[\]\<\>`\'…》]', '', text)
 
+            text = re.sub(r'\\', '', text)
+            text = re.sub(r'\\\\', '', text)
+            text = re.sub('\'', '', text)
+            text = re.sub('\"', '', text)
+
+            text = re.sub('\u200b', ' ', text)
+            text = re.sub('&nbsp;|\t', ' ', text)
+            text = re.sub('\r\n', '\n', text)
+
+            while (True):
+                text = re.sub('  ', ' ', text)
+                if text.count('  ') == 0:
+                    break
+
+            while (True):
+                text = re.sub('\n \n ', '\n', text)
+                # print(text.count('\n \n '))
+                if text.count('\n \n ') == 0:
+                    break
+
+            while (True):
+                text = re.sub(' \n', '\n', text)
+                if text.count(' \n') == 0:
+                    break
+
+            while (True):
+                text = re.sub('\n ', '\n', text)
+                if text.count('\n ') == 0:
+                    break
+
+            while (True):
+                text = re.sub('\n\n', '\n', text)
+                # print(text.count('\n\n'))
+                if text.count('\n\n') == 0:
+                    break
+            text = re.sub(u'[\u2500-\u2BEF]', '', text)  # I changed this to exclude chinese char
+
+            # dingbats
+            text = re.sub('\\-|\]|\{|\}|\(|\)', "", text)
+
+            text = re.sub(u'[\u2702-\u27b0]', '', text)
+            text = re.sub(u'[\uD800-\uDFFF]', '', text)
+            text = re.sub(u'[\U0001F600-\U0001F64F]', '', text)  # emoticons
+            text = re.sub(u'[\U0001F300-\U0001F5FF]', '', text)  # symbols & pictographs
+            text = re.sub(u'[\U0001F680-\U0001F6FF]', '', text)  # transport & map symbols
+            text = re.sub(u'[\U0001F1E0-\U0001F1FF]', '', text)  # flags (iOS)
+        except Exception as e:
+            print('cleaser error')
+            text = 'None'
+        return text
 
     def tumblbugCrawler(self):
         conn = self.conn
@@ -189,9 +247,23 @@ class TumblbugCrawler:
 
             #endate - 수작업
             endate = "tobe"
+
+            pagename = self.cleansing(pagename)
+            category = self.cleansing(category)
+            title= self.cleansing(title)
+            achieve= self.cleansing(achieve)
+            funding= self.cleansing(funding)
+            supporter= self.cleansing(supporter)
+            goalmoney= self.cleansing(goalmoney)
+            remaining= self.cleansing(remaining)
+            endate= self.cleansing(endate)
+
+
             print("success2\n")
 
-            sql1 = 'insert into tumblbug_crawl (id, pagename, category, title, achieve, funding, supporter, goal,remaining, endate)                                                    value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'                                                        %(id, pagename, category, title, achieve, funding, supporter, goal, remaining, endate)
+            sql1 = 'insert into tumblbug_crawl (id, pagename, category, title, achieve, funding, supporter, goal,remaining, endate)\
+                                                    value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
+                                                        %(id, pagename, category, title, achieve, funding, supporter, goalmoney, remaining, endate)
             curs.execute(sql1)
             conn.commit()
             print("success3\n")
@@ -202,7 +274,7 @@ class TumblbugCrawler:
             curs.execute(sql_url)
             conn.commit()
 
-            goToCommunityTab()
+            self.goToCommunityTab()
 
 
         conn.close()
