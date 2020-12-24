@@ -24,7 +24,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding = 'utf-8')
 class WadizCrawler:
     def __init__(self):
         self.conn = pymysql.connect(host='127.0.0.1', user='root', password='wdta2181',
-                               db='test', charset='utf8mb4')
+                               db='test', charset='utf8')
 
         self.path = os.path.dirname(os.path.realpath(__file__))
 
@@ -214,6 +214,8 @@ class WadizCrawler:
         curs = conn.cursor()
 
         #크롤링 안된 url 가져오기
+
+        sql = "delete from wadiz_urllist where title "
         sql = "select * from wadiz_urllist where crawled='F' or crawled='DB insert error'"
         curs.execute(sql)
         rows = curs.fetchall()
@@ -356,10 +358,11 @@ class WadizCrawler:
                 self.driver.implicitly_wait(30)
                 print("replaced url: "+replacedUrl)
                 Num = self.driver.find_element_by_xpath('//*[@id="container"]/div[6]/div/div/div[1]/div[1]/div[1]/p[5]/strong')
-                self.driver.implicitly_wait(30)
+                #self.driver.implicitly_wait(30)
                 supporterNum = Num.text
-                if len(supporterNum) >= 4 :
-                    supporterNum = supporterNum.strip().replace(',', '')
+                #print(supporterNum)
+                supporterNum = supporterNum.strip().replace(',', '')
+                print(supporterNum)
 
                 n = 1;
                 while True:
@@ -378,7 +381,6 @@ class WadizCrawler:
                     except:
                         print("더보기 끝")
                         break;
-
 
                 for i in range(1, int(supporterNum)+1):
                     user_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/button'%i
@@ -408,6 +410,7 @@ class WadizCrawler:
                         else :
                             defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button[1]/div/dl/dt'
                         investment = self.driver.find_element_by_xpath(defaultoption_xpath).text
+                        investment = investment.strip().replace(',', '')
                         investment = investment[:-4]
                         sql= "insert into wadiz_user_info(site, title, username, investment) values ('wadiz',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
                         curs.execute(sql)
