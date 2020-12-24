@@ -364,59 +364,62 @@ class WadizCrawler:
                 supporterNum = supporterNum.strip().replace(',', '')
                 print(supporterNum)
 
-                n = 1;
+                #더보기 버튼 누르기.
                 while True:
                     try:
                         more_xpath = self.driver.find_element_by_xpath('//*[@id="reward-static-supports-list-app"]/div/div/div/div[2]/button')
-
                         action = ActionChains(self.driver).click()
                         action.move_to_element(more_xpath).perform()
-                        #self.driver.find_element_by_xpath('//*[@id="reward-static-supports-list-app"]/div/div/div/div[2]/button').click()
-                        n = n+1;
-                        #self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                        time.sleep(1)
-                        print("더보기", n, "번 누름")
-                        self.driver.implicitly_wait(30)
+                        #time.sleep(1)
+                        self.driver.implicitly_wait(20)
 
                     except:
-                        print("더보기 끝")
                         break;
 
                 for i in range(1, int(supporterNum)+1):
                     user_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/button'%i
-                    anonymous = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/strong[1]'%i
                     investment_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/strong'%i
-                    self.driver.implicitly_wait(30)
+                    self.driver.implicitly_wait(15)
 
                     try:
                         user = self.driver.find_element_by_xpath(user_xpath).text
                     except:
-                        user = '익명의 서포터'
+                        continue
 
-                    self.driver.implicitly_wait(30)
+                    #self.driver.implicitly_wait(10)
+                    user = self.cleansing(user)
                     investment = self.driver.find_element_by_xpath(investment_xpath).text
-                    self.driver.implicitly_wait(30)
 
-                    if user != '익명의 서포터' and investment != '지지서명' and investment != '펀딩':
-                        user = self.cleansing(user)
-                        investment = investment[:-4]
-                        sql= "insert into wadiz_user_info(site, title, username, investment) values ('wadiz',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
-                        curs.execute(sql)
-                        conn.commit()
+                    #이선명님이 지지서명에 참여 했습니다.
+                    if investment == '지지서명' :
+                        continue
+
+                    #이선명님이 펀딩에 참여했습니다.
                     elif investment == '펀딩' :
-                        user = self.cleansing(user)
+
+                        #종료된 프로젝트 중, remaining_day 마감되어 '펀딩성공'이라고 뜨는 경우.
                         if remaining == '펀딩성공' :
                             defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[1]/div/dl/dt'
+                        #종료된 프로젝트 중, 아직 remaining_day가 남은 경우.
                         else :
                             defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button[1]/div/dl/dt'
+
                         investment = self.driver.find_element_by_xpath(defaultoption_xpath).text
                         investment = investment.strip().replace(',', '')
                         investment = investment[:-4]
                         sql= "insert into wadiz_user_info(site, title, username, investment) values ('wadiz',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
-                        curs.execute(sql)
-                        conn.commit()
+
+                    #이선명님이 30,000원 펀딩에 참여 했습니다.
                     else :
-                        continue
+                        investment = investment.strip().replace(',', '')
+                        investment = investment[:-4]
+                        sql= "insert into wadiz_user_info(site, title, username, investment) values ('wadiz',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
+
+                    self.driver.implicitly_wait(20)
+
+                    curs.execute(sql)
+                    conn.commit()
+
         else:
             print(url+"already exist")
 
