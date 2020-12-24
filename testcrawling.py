@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from bs4.element import NavigableString
 from selenium.webdriver.chrome.options import Options
 import os
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 from lxml import etree
 import pymysql
 from datetime import datetime
@@ -60,7 +60,7 @@ class TumblbugCrawler:
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             #print('down')
             time.sleep(SCROLL_PAUSE_TIME)
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight-800);")
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight-1000);")
             #print('up')
             time.sleep(SCROLL_PAUSE_TIME)
             new_height = self.driver.execute_script("return document.body.scrollHeight")
@@ -107,9 +107,7 @@ class TumblbugCrawler:
                     #print(url)
     #driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         #conn.close()
-    def goToCommunityTab(self):
-        self.driver.find_element_by_xpath('//*[@id="contentsNavigation"]/nav/div/div/a[2]').click()
-        self.driver.implicitly_wait(30)
+
 
     def cleansing(self, text):
         try:
@@ -166,6 +164,52 @@ class TumblbugCrawler:
             text = 'None'
         return text
 
+    def getuserinfo(self, url, title, brand):
+        #https://tumblbug.com/planner101?ref=discover
+        #https://tumblbug.com/planner101/community?ref=discover
+        print("getuserinfo")
+        url = url.replace("?","/community?")
+        req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        response = urlopen(req)
+        print("urlopen")
+        htmlparser = etree.HTMLParser()
+        tree = etree.parse(response, htmlparser)
+        #projectHost = self.cleansing(projectHost)
+        print("is there any posting?")
+        try:
+            communityPostNum = self.driver.find_element_by_xpath('//*[@id="contentsNavigation"]/nav/div/div/a[2]/span').text
+            self.driver.implicitly_wait(5)
+            print("yes, there are ", end='')
+            print(communityPostNum)
+        except:
+            return
+        print("there are postings")
+        investment = tree.xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/div[2]/div/div/div[1]/text()[1]')
+        investment = self.cleansing(investment)
+        for i in range(int(communityPostNum)):
+            user = tree.xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div['+str(i+2)+']/div/div[1]/div[2]/div/div[1]/div/a/div')
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[2]/div/div[1]/div[2]/div/div[1]/div/a/div
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[3]/div/div[1]/div[2]/div/div[1]/div/a/div
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[4]/div/div[1]/div[2]/div/div[1]/div/a/div
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[5]/div/div[1]/div[2]/div/div[1]/div/a/div
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[6]/div/div[1]/div[2]/div/div[1]/div/a/div
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[7]/div/div[1]/div[2]/div/div[1]/div/a/div
+
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[2]/div/div[1]/div[2]/div/div[1]/div/a/div
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[3]/div/div[1]/div[2]/div/div[1]/div/a/div
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[4]/div/div[1]/div[2]/div/div[1]/div/a/div
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[5]/div/div[1]/div[2]/div/div[1]/div/a/div
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[6]/div/div[1]/div[2]/div/div[1]/div/a/div
+
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[2]/div/div[1]/div[2]/div/div[1]/div/a/div
+#
+#
+#
+#
+            print(user)
+            if user != brand:
+                sql = "insert into user_info(site, title, username, investment) values ('tumblbug',\'%s\',\'%s\',\'%s\')"%(title,user, investment)
+
     def tumblbugCrawler(self):
         conn = self.conn
         curs = conn.cursor()
@@ -177,14 +221,14 @@ class TumblbugCrawler:
         #self.driver = self.webdriver.Chrome(options=option, executable_path=self.path + "\chromedriver.exe")
         #chromedriver = 'C:/Users/ljy01/Desktop/chromedriver/chromedriver_win32/chromedriver.exe'
         #driver = webdriver.Chrome(chromedriver)
-
         for row in rows:
             id = row[0]
             pagename = "tumblbug"#row[2]
             url = row[1]
 
+
             if url == 'None':
-                continue;
+                continue
 
             self.driver.get(url)
             sub_html = self.driver.page_source
@@ -202,6 +246,7 @@ class TumblbugCrawler:
             percentachieved = sub_soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > aside > div.ProjectIntroduction__FundingStatus-sc-1o2ojgb-13.jqTlEc > div:nth-child(1) > div.ProjectIntroduction__StatusValue-sc-1o2ojgb-16.lgJcVA > span.ProjectIntroduction__FundingRate-sc-1o2ojgb-17.cNDicH')
             goal = sub_soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > aside > div.FundingInformation-cjd67l-0.gGtZns > div > span')
             pagename = "tumblbug"
+            supporter = sub_soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > aside > div.ProjectIntroduction__FundingStatus-sc-1o2ojgb-13.jqTlEc > div:nth-child(3) > div.ProjectIntroduction__StatusValue-sc-1o2ojgb-16.lgJcVA')
 
             print("success1\n")
             #category
@@ -228,8 +273,12 @@ class TumblbugCrawler:
                 tag.replace_with('')
             funding = collection.text.replace(",","")
 
-            supporter = "tobe"
+            #supporter = "tobe"
 
+            for i in supporter :
+                supporternum = i.text.strip()
+            supporter = supporternum[:-1]
+            supporter = supporter.replace(',', '')
             # likes = NULL
 
             # goal
@@ -244,10 +293,13 @@ class TumblbugCrawler:
                 day = i.text.strip()
             daynum = len(day)
             remaining = day[:daynum-1]
+            if remaining[-1] == '시' :
+                remaining = remaining[:-1]
 
             #endate - 수작업
             endate = "tobe"
 
+            Brand = self.cleansing(Brand)
             pagename = self.cleansing(pagename)
             category = self.cleansing(category)
             title= self.cleansing(title)
@@ -261,9 +313,9 @@ class TumblbugCrawler:
 
             print("success2\n")
 
-            sql1 = 'insert into tumblbug_crawl (id, pagename, category, title, achieve, funding, supporter, goal,remaining, endate)\
-                                                    value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
-                                                        %(id, pagename, category, title, achieve, funding, supporter, goalmoney, remaining, endate)
+            sql1 = 'insert into tumblbug_crawl (id, pagename, category, title, brand, achieve, funding, supporter, goal,remaining, endate)\
+                                                    value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
+                                                        %(id, pagename, category, title, Brand, achieve, funding, supporter, goalmoney, remaining, endate)
             curs.execute(sql1)
             conn.commit()
             print("success3\n")
@@ -274,8 +326,8 @@ class TumblbugCrawler:
             curs.execute(sql_url)
             conn.commit()
 
-            self.goToCommunityTab()
-
+            print("get user info func")
+            self.getuserinfo(url, title, Brand)
 
         conn.close()
 
@@ -311,7 +363,7 @@ if __name__ == '__main__':
     page_url = 'https://tumblbug.com/discover?ongoing=onGoing&sort=endedAt'
     nUrl = 100
     wc = TumblbugCrawler()
-    wc.getUrlLister(page_url, nUrl)
+    #wc.getUrlLister(page_url, nUrl)
     wc.tumblbugCrawler()
 
 
