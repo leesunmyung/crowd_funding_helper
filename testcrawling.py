@@ -365,7 +365,7 @@ class TumblbugCrawler:
 if __name__ == '__main__':
 
     page_url = 'https://tumblbug.com/discover?ongoing=onGoing&sort=endedAt'
-    nUrl = 10
+    nUrl = 100
     wc = TumblbugCrawler()
     #wc.getUrlLister(page_url, nUrl)
     wc.tumblbugCrawler()
