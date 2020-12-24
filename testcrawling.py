@@ -164,16 +164,16 @@ class TumblbugCrawler:
             text = 'None'
         return text
 
-    def getuserinfo(self, url, title, brand):
+    def getuserinfo(self, url, title):
         #https://tumblbug.com/planner101?ref=discover
         #https://tumblbug.com/planner101/community?ref=discover
         print("getuserinfo")
         url = url.replace("?","/community?")
-        req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        response = urlopen(req)
-        print("urlopen")
-        htmlparser = etree.HTMLParser()
-        tree = etree.parse(response, htmlparser)
+        #req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        #response = urlopen(req)
+        self.driver.get(url)
+        #htmlparser = etree.HTMLParser()
+        #tree = etree.parse(response, htmlparser)
         #projectHost = self.cleansing(projectHost)
         print("is there any posting?")
         try:
@@ -182,33 +182,21 @@ class TumblbugCrawler:
             print("yes, there are ", end='')
             print(communityPostNum)
         except:
+            print("no")
             return
-        print("there are postings")
-        investment = tree.xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/div[2]/div/div/div[1]/text()[1]')
+
+        investment = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/div[2]/div/div/div[1]/text()[1]').text
         investment = self.cleansing(investment)
         for i in range(int(communityPostNum)):
-            user = tree.xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div['+str(i+2)+']/div/div[1]/div[2]/div/div[1]/div/a/div')
+            try:
+                user = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div['+str(i+2)+']/div/div[1]/div/div/div[1]/div/a/div').text
+            except:
+                continue
 #//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[2]/div/div[1]/div[2]/div/div[1]/div/a/div
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[3]/div/div[1]/div[2]/div/div[1]/div/a/div
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[4]/div/div[1]/div[2]/div/div[1]/div/a/div
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[5]/div/div[1]/div[2]/div/div[1]/div/a/div
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[6]/div/div[1]/div[2]/div/div[1]/div/a/div
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[7]/div/div[1]/div[2]/div/div[1]/div/a/div
-
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[2]/div/div[1]/div[2]/div/div[1]/div/a/div
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[3]/div/div[1]/div[2]/div/div[1]/div/a/div
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[4]/div/div[1]/div[2]/div/div[1]/div/a/div
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[5]/div/div[1]/div[2]/div/div[1]/div/a/div
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[6]/div/div[1]/div[2]/div/div[1]/div/a/div
-
-#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[2]/div/div[1]/div[2]/div/div[1]/div/a/div
-#
-#
-#
+#//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[3]/div/div[1]/div/div/div[1]/div/a/div
 #
             print(user)
-            if user != brand:
-                sql = "insert into user_info(site, title, username, investment) values ('tumblbug',\'%s\',\'%s\',\'%s\')"%(title,user, investment)
+            sql = "insert into user_info(site, title, username, investment) values ('tumblbug',\'%s\',\'%s\',\'%s\')"%(title,user, investment)
 
     def tumblbugCrawler(self):
         conn = self.conn
@@ -327,7 +315,7 @@ class TumblbugCrawler:
             conn.commit()
 
             print("get user info func")
-            self.getuserinfo(url, title, Brand)
+            self.getuserinfo(url, title)
 
         conn.close()
 
@@ -357,6 +345,16 @@ class TumblbugCrawler:
             last_height = new_height
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight-100);")
 """
+
+#커뮤니티1, SKKU
+##react-view > div.ProjectPage__ProjectContentsBackground-f3cisk-0.lbhpFL > div.Container-gci8y7-0.wYlFP > div > div.ProjectPage__ProjectContentsMainColumn-f3cisk-2.dypJVt > div > div > div.Community__Posts-sc-1o9947p-0.kEeUNF > div.CommunityPostSummaryCard__PostSummaryCardWrapper-sc-3xh5y6-1.cHWozv > div > div.CommunityPostSummaryCard__MetaWrapper-sc-3xh5y6-2.Jpeyp > div > div > div.CommunityPostSummaryCard__UserProfile-sc-3xh5y6-6.ljvGXI > div > a > div #후원자1.
+
+#커뮤니티8명, 암흑낭만주의
+##react-view > div.ProjectPage__ProjectContentsBackground-f3cisk-0.lbhpFL > div.Container-gci8y7-0.wYlFP > div > div.ProjectPage__ProjectContentsMainColumn-f3cisk-2.dypJVt > div > div > div.Community__Posts-sc-1o9947p-0.kEeUNF > div:nth-child(2) > div > div.CommunityPostSummaryCard__MetaWrapper-sc-3xh5y6-2.Jpeyp > div > div > div.CommunityPostSummaryCard__UserProfile-sc-3xh5y6-6.ljvGXI > div > a > div #후원자1.
+##react-view > div.ProjectPage__ProjectContentsBackground-f3cisk-0.lbhpFL > div.Container-gci8y7-0.wYlFP > div > div.ProjectPage__ProjectContentsMainColumn-f3cisk-2.dypJVt > div > div > div.Community__Posts-sc-1o9947p-0.kEeUNF > div:nth-child(3) > div > div.CommunityPostSummaryCard__MetaWrapper-sc-3xh5y6-2.Jpeyp > div.CommunityPostSummaryCard__Meta-sc-3xh5y6-4.ebxTKa > div > div.CommunityPostSummaryCard__UserProfile-sc-3xh5y6-6.ljvGXI > div > a > div #창작자.
+##react-view > div.ProjectPage__ProjectContentsBackground-f3cisk-0.lbhpFL > div.Container-gci8y7-0.wYlFP > div > div.ProjectPage__ProjectContentsMainColumn-f3cisk-2.dypJVt > div > div > div.Community__Posts-sc-1o9947p-0.kEeUNF > div:nth-child(4) > div > div.CommunityPostSummaryCard__MetaWrapper-sc-3xh5y6-2.Jpeyp > div > div > div.CommunityPostSummaryCard__UserProfile-sc-3xh5y6-6.ljvGXI > div > a > div #후원자2.
+
+
 
 if __name__ == '__main__':
 
