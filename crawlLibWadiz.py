@@ -56,11 +56,11 @@ class WadizCrawler:
         try:
             achieve = achieve[0]
         except:
-            achieve = 'None'
+            achieve = '0'
         try:
             supporter = supporter[0]
         except:
-            supporter = 'None'
+            supporter = '0'
         """
         try:
             likes = likes[0]
@@ -70,11 +70,11 @@ class WadizCrawler:
         try:
             funding = funding[0]
         except:
-            funding = 'None'
+            funding = '0'
         try:
-            goal = goal[0][:-1]
+            goal = goal[0][1:-1]
         except:
-            goal = 'None'
+            goal = '0'
 
         try:
             period = period[0].strip()
@@ -86,7 +86,7 @@ class WadizCrawler:
             #remaining = remaining[0][:-4]
             #print(remaining)
         except:
-            remaining = 'None'
+            remaining = '0'
             """
         try:
             stdate = period.split('-')[0].replace('.', '-')
@@ -213,8 +213,9 @@ class WadizCrawler:
         conn = self.conn
         curs = conn.cursor()
 
-        #크롤링 안된 url 가져오기
+        #self.manipulateDB()
 
+        #크롤링 안된 url 가져오기
         sql = "delete from wadiz_urllist where title "
         sql = "select * from wadiz_urllist where crawled='F' or crawled='DB insert error'"
         curs.execute(sql)
@@ -238,8 +239,11 @@ class WadizCrawler:
             title = tree.xpath('//*[@id="container"]/div[3]/h2/a/text()')
 
             achieve = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[3]/strong/text()')
+
             funding = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[4]/strong/text()')
+            #//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[2]/strong
             supporter = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[5]/strong/text()')
+
             #likes1 = list(tree.xpath('//*[@id="cntLike"]/text()')[0])
             #likes1 = "".join(likes1)
             #likes = []
@@ -253,19 +257,24 @@ class WadizCrawler:
             #print('goal1=', goal1)
             period = tree.xpath(
                 '//*[@id="container"]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[5]/div/p[1]/text()[4]')
-                #period에서 펀딩 기간을 가져와야하는데 목표 금액이 갖고 와짐..
+
             remaining = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[1]/text()')
 
 
             try:
+                #펀딩 기간 지났고, 펀딩 성공 못한 프로젝트. flag=1;
                 if remaining[0] == '% 달성':
+                    flag=1;
+                    remaining = '0'
+                    print("펀딩기간/펀딩성공 안적혀있는 프로젝트 url : ", url)
+                    achieve = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[1]/strong/text()')
                     funding = tree.xpath(
-                        '//*[@id="container"]/div[4]/div/div[1]/div[2]/div/div/section/div[4]/div/div[1]/div[1]/p[2]/strong/text()')
+                        '//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[2]/strong/text()')
                     supporter = tree.xpath(
-                        '//*[@id="container"]/div[4]/div/div[1]/div[2]/div/div/section/div[4]/div/div[1]/div[1]/p[3]/strong/text()')
-                    likes = tree.xpath('//*[@id="cntLike"]/text()')
+                        '//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[3]/strong/text()')
+                    #likes = tree.xpath('//*[@id="cntLike"]/text()')
             except:
-                print('url:',url)
+                print('00일 남음 또는 펀딩 성공 url:',url)
 
             now = datetime.now()
             dtStr = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -280,8 +289,10 @@ class WadizCrawler:
             supporter = self.cleansing(supporter)
             #likes = self.cleansing(likes)
             goal = self.cleansing(goal)
+            print('goal : ', goal)
             period = self.cleansing(period)
             remaining = self.cleansing(remaining)
+            print("remaining", remaining)
             #endate = self.cleansing(endate)
             nowday = now.strftime("%Y-%m-%d")
 
@@ -297,7 +308,9 @@ class WadizCrawler:
             row = curs.fetchall()
             if row[0][0]==0:
                 try:
-                    if endate>nowday:
+                    #아직 기간 남은 경우.
+                    #오늘 자정 마감인 경우는 endate==nowday라서 제외.
+                    if endate>nowday :
                         remaining = remaining[:-4]
                         sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, goal, remaining_day, endate)\
                                                 value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
@@ -305,27 +318,30 @@ class WadizCrawler:
                         curs.execute(sql1)
                         conn.commit()
 
-                        print('Crawling '+url+' finish',sql1)
+                        print(remaining, '일 남음 : ', 'Crawling '+url+' finish',sql1)
 
                         conn.commit()
                         sql_url = "update wadiz_urllist set status='펀딩중', crawled='T' where url=\'%s\'"% (url)  #where id -> where url
                         curs.execute(sql_url)
                         conn.commit()
 
-                    elif remaining=='펀딩성공':
+                    elif endate == nowday : #remaining=='오늘 자정 마감'
+                        remaining = '1';
                         sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, goal, remaining_day, endate)\
-                                                                        value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
-                               % (
-                               id, pagename, category, title, achieve, funding, supporter, goal,
-                               remaining, endate)
+                                                value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
+                                                    %(id, pagename, category, title, achieve, funding, supporter, goal, remaining, endate)
                         curs.execute(sql1)
                         conn.commit()
-                        print('Crawling ' + url + ' finish', sql1)
 
-                        sql_url = "update wadiz_urllist set status='펀딩완료',crawled='T' where url=\'%s\'" % (url)
+                        print('오늘 자정 마감 : ', 'Crawling '+url+' finish',sql1)
+
+                        conn.commit()
+                        sql_url = "update wadiz_urllist set status='펀딩중', crawled='T' where url=\'%s\'"% (url)  #where id -> where url
                         curs.execute(sql_url)
                         conn.commit()
-                    else:
+
+                    #기간 지났고, 펀딩은 성공한 프로젝트.. '펀딩 성공'이라고 뜨는 경우.
+                    elif remaining=='펀딩성공':
                         sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, goal, remaining_day, endate)\
                                                                         value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
                                % (
@@ -333,7 +349,22 @@ class WadizCrawler:
                                '0', endate)
                         curs.execute(sql1)
                         conn.commit()
-                        print('Crawling ' + url + ' finish', sql1)
+                        print('펀딩성공(기간 지남(0)) : ', 'Crawling ' + url + ' finish', sql1)
+
+                        sql_url = "update wadiz_urllist set status='펀딩완료',crawled='T' where url=\'%s\'" % (url)
+                        curs.execute(sql_url)
+                        conn.commit()
+
+                    #기간도 지났고, 펀딩 성공하지 못한 프로젝트. 그래서 위에 아무것도 안뜨는 경우. remaining_day는 0으로.
+                    else :
+                        sql1 = 'insert into wadiz_crawl (id, pagename, category, title, achieve, funding, supporter, goal, remaining_day, endate)\
+                                                                        value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')' \
+                               % (
+                               id, pagename, category, title, achieve, funding, supporter, goal,
+                               '0', endate)
+                        curs.execute(sql1)
+                        conn.commit()
+                        print('기간지났고 펀딩못함 : ', 'Crawling ' + url + ' finish', sql1)
 
                         sql_url = "update wadiz_urllist set status='펀딩완료',crawled='T' where url=\'%s\'" % (url)
                         curs.execute(sql_url)
@@ -357,12 +388,16 @@ class WadizCrawler:
                 self.driver.get(replacedUrl)
                 self.driver.implicitly_wait(30)
                 print("replaced url: "+replacedUrl)
-                Num = self.driver.find_element_by_xpath('//*[@id="container"]/div[6]/div/div/div[1]/div[1]/div[1]/p[5]/strong')
+
+                #Num = self.driver.find_element_by_xpath('//*[@id="container"]/div[5]/ul/li[6]/a/span')
+                #//*[@id="container"]/div[5]/ul/li[6]/a/span
+                #//*[@id="container"]/div[6]/div/div/div[1]/div[1]/div[1]/p[3]/strong
                 #self.driver.implicitly_wait(30)
-                supporterNum = Num.text
+                #supporterNum = Num.text
                 #print(supporterNum)
-                supporterNum = supporterNum.strip().replace(',', '')
-                print(supporterNum)
+                #supporterNum = supporterNum.strip().replace(',', '')
+                print("supporter : ", supporter)
+
 
                 #더보기 버튼 누르기.
                 while True:
@@ -376,7 +411,7 @@ class WadizCrawler:
                     except:
                         break;
 
-                for i in range(1, int(supporterNum)+1):
+                for i in range(1, int(supporter)+1):
                     user_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/button'%i
                     investment_xpath = '//*[@id="reward-static-supports-list-app"]/div/div/div/div[1]/div[%d]/div/p/strong'%i
                     self.driver.implicitly_wait(15)
@@ -397,12 +432,42 @@ class WadizCrawler:
                     #이선명님이 펀딩에 참여했습니다.
                     elif investment == '펀딩' :
 
-                        #종료된 프로젝트 중, remaining_day 마감되어 '펀딩성공'이라고 뜨는 경우.
-                        if remaining == '펀딩성공' :
-                            defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[1]/div/dl/dt'
-                        #종료된 프로젝트 중, 아직 remaining_day가 남은 경우.
+                        #00일 남음.
+                        #//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button[1]/div/dl/dt
+                        #//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button[2]/div/dl/dt
+
+                        #펀딩성공.
+                        #//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[1]/div/dl/dt
+                        #//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[2]/div/dl/dt
+
+                        #종료된 프로젝트 중, 기간 지났고, '펀딩성공'도 아닌 경우라 위에 아무 것도 안뜨는 경우.
+                        if flag == 1 :
+                            try :
+                                defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[1]/div/dl/dt'
+                            except :
+                                defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button/div/dl/dt'
+
+                        #종료된 프로젝트 중, 기간 지났고, '펀딩성공'이라고 뜨는 경우. 확산 안뜸.
+                        elif remaining == '펀딩성공' :
+                            try :
+                                defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button[1]/div/dl/dt'
+                            except :
+                                defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button/div/dl/dt'
+
+                        #종료된 프로젝트 중, 아직 remaining_day가 남은 경우. 확산 뜸.
                         else :
-                            defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button[1]/div/dl/dt'
+                            try :
+                                defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[1]/div/dl/dt'
+                            except :
+                                defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button/div/dl/dt'
+                        #성공 못함.
+                        #리워드 1가지.
+                        #//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button/div/dl/dt
+                        #//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button/div/dl/dt
+                        ##container > div.reward-body-wrap > div > div > div.wd-ui-sub-opener-info > div.moveRewards > div > button > div > dl > dt
+                        #리워드 여러 개.
+                        #//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[1]/div/dl/dt
+                        ##container > div.reward-body-wrap > div > div.wd-ui-info-wrap > div.wd-ui-sub-opener-info > div.moveRewards > div > button:nth-child(3) > div > dl > dt
 
                         investment = self.driver.find_element_by_xpath(defaultoption_xpath).text
                         investment = investment.strip().replace(',', '')
