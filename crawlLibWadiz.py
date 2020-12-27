@@ -209,7 +209,7 @@ class WadizCrawler:
         conn.close()
 
     def getCrawler(self):
-
+        flag = 0;
         conn = self.conn
         curs = conn.cursor()
 
@@ -431,7 +431,7 @@ class WadizCrawler:
 
                     #이선명님이 펀딩에 참여했습니다.
                     elif investment == '펀딩' :
-
+                        print(user, "그냥 펀딩")
                         #00일 남음.
                         #//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button[1]/div/dl/dt
                         #//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button[2]/div/dl/dt
@@ -446,20 +446,22 @@ class WadizCrawler:
                                 defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[1]/div/dl/dt'
                             except :
                                 defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button/div/dl/dt'
+                            flag = 0;
 
                         #종료된 프로젝트 중, 기간 지났고, '펀딩성공'이라고 뜨는 경우. 확산 안뜸.
                         elif remaining == '펀딩성공' :
+                            try :
+                                defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[1]/div/dl/dt'
+                            except :
+                                defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button/div/dl/dt'
+
+                        #종료된 프로젝트 중, 아직 remaining_day가 남은 경우. 확산 뜸.
+                        else :
                             try :
                                 defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button[1]/div/dl/dt'
                             except :
                                 defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[8]/div/button/div/dl/dt'
 
-                        #종료된 프로젝트 중, 아직 remaining_day가 남은 경우. 확산 뜸.
-                        else :
-                            try :
-                                defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button[1]/div/dl/dt'
-                            except :
-                                defaultoption_xpath = '//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button/div/dl/dt'
                         #성공 못함.
                         #리워드 1가지.
                         #//*[@id="container"]/div[6]/div/div/div[1]/div[7]/div/button/div/dl/dt
