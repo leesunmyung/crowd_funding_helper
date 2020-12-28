@@ -159,12 +159,15 @@ class TumblbugCrawler:
             text = re.sub(u'[\U0001F300-\U0001F5FF]', '', text)  # symbols & pictographs
             text = re.sub(u'[\U0001F680-\U0001F6FF]', '', text)  # transport & map symbols
             text = re.sub(u'[\U0001F1E0-\U0001F1FF]', '', text)  # flags (iOS)
+            text = re.sub('[^0-9]','',text)
         except Exception as e:
-            print('cleaser error')
+            print('cleanser error')
             text = 'None'
         return text
 
     def getuserinfo(self, url, title):
+        conn = self.conn
+        curs = conn.cursor()
         #https://tumblbug.com/planner101?ref=discover
         #https://tumblbug.com/planner101/community?ref=discover
         print("getuserinfo")
@@ -185,7 +188,7 @@ class TumblbugCrawler:
             print("no")
             return
 
-        investment = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/div[2]/div/div/div[1]/text()[1]').text
+        investment = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/div[2]/div/div/div[1]').text
         investment = self.cleansing(investment)
         for i in range(int(communityPostNum)):
             try:
@@ -195,8 +198,11 @@ class TumblbugCrawler:
 #//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[2]/div/div[1]/div[2]/div/div[1]/div/a/div
 #//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div[3]/div/div[1]/div/div/div[1]/div/a/div
 #
-            print(user)
-            sql = "insert into user_info(site, title, username, investment) values ('tumblbug',\'%s\',\'%s\',\'%s\')"%(title,user, investment)
+            print(user,end='')
+            print(investment)
+            sql = "insert into user_info(site, title, username, investment) values ('tumblbug',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
+            curs.execute(sql)
+            conn.commit()
 
     def tumblbugCrawler(self):
         conn = self.conn
@@ -214,9 +220,8 @@ class TumblbugCrawler:
             pagename = "tumblbug"#row[2]
             url = row[1]
 
-
             if url == 'None':
-                continue
+                continue;
 
             self.driver.get(url)
             sub_html = self.driver.page_source
@@ -230,11 +235,11 @@ class TumblbugCrawler:
             brand = sub_soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > div.ProjectIntroduction__ProjectOutline-sc-1o2ojgb-2.jbdzfG > div > div > a')
             Category = sub_soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > div.ProjectIntroduction__ProjectOutline-sc-1o2ojgb-2.jbdzfG > div > a > span')
             collection = sub_soup.find('div',attrs={'class': 'ProjectIntroduction__StatusValue-sc-1o2ojgb-16 lgJcVA'})
+            supporter = sub_soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > aside > div.ProjectIntroduction__FundingStatus-sc-1o2ojgb-13.jqTlEc > div:nth-child(3) > div.ProjectIntroduction__StatusValue-sc-1o2ojgb-16.lgJcVA')
             remain_day = sub_soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > aside > div.ProjectIntroduction__FundingStatus-sc-1o2ojgb-13.jqTlEc > div:nth-child(2) > div.ProjectIntroduction__StatusValue-sc-1o2ojgb-16.lgJcVA')
             percentachieved = sub_soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > aside > div.ProjectIntroduction__FundingStatus-sc-1o2ojgb-13.jqTlEc > div:nth-child(1) > div.ProjectIntroduction__StatusValue-sc-1o2ojgb-16.lgJcVA > span.ProjectIntroduction__FundingRate-sc-1o2ojgb-17.cNDicH')
             goal = sub_soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > aside > div.FundingInformation-cjd67l-0.gGtZns > div > span')
             pagename = "tumblbug"
-            supporter = sub_soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > aside > div.ProjectIntroduction__FundingStatus-sc-1o2ojgb-13.jqTlEc > div:nth-child(3) > div.ProjectIntroduction__StatusValue-sc-1o2ojgb-16.lgJcVA')
 
             print("success1\n")
             #category
@@ -248,6 +253,7 @@ class TumblbugCrawler:
 
             #brand
             for i in brand:
+                global Brand
                 Brand = i.text.strip()
 
             #achieve
@@ -261,12 +267,14 @@ class TumblbugCrawler:
                 tag.replace_with('')
             funding = collection.text.replace(",","")
 
+
             #supporter = "tobe"
 
             for i in supporter :
                 supporternum = i.text.strip()
             supporter = supporternum[:-1]
             supporter = supporter.replace(',', '')
+
             # likes = NULL
 
             # goal
@@ -287,10 +295,10 @@ class TumblbugCrawler:
             #endate - 수작업
             endate = "tobe"
 
-            Brand = self.cleansing(Brand)
             pagename = self.cleansing(pagename)
             category = self.cleansing(category)
             title= self.cleansing(title)
+            Brand = self.cleansing(Brand)
             achieve= self.cleansing(achieve)
             funding= self.cleansing(funding)
             supporter= self.cleansing(supporter)
@@ -302,20 +310,21 @@ class TumblbugCrawler:
             print("success2\n")
 
             sql1 = 'insert into tumblbug_crawl (id, pagename, category, title, brand, achieve, funding, supporter, goal,remaining, endate)\
-                                                    value(%d,\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
+                                                    values(%d,\'%s\',\'%s\',\'%s\',\'%s\', \'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
                                                         %(id, pagename, category, title, Brand, achieve, funding, supporter, goalmoney, remaining, endate)
             curs.execute(sql1)
             conn.commit()
-            print("success3\n")
-            print('Crawling '+url+' finish',sql1)
 
-            conn.commit()
-            sql_url = "update tumblbug_urllist set status='펀딩중', crawled='T' where url=\'%s\'"% (url)  #where id -> where url
-            curs.execute(sql_url)
-            conn.commit()
+            print("title : ",end="")
+            print(title)
 
             print("get user info func")
             self.getuserinfo(url, title)
+            print('Crawling '+url+' finish',sql1)
+            sql_url = "update tumblbug_urllist set status='펀딩중', crawled='T' where url=\'%s\'"% (url)  #where id -> where url
+            curs.execute(sql_url)
+            conn.commit()
+            print("success3\n")
 
         conn.close()
 
