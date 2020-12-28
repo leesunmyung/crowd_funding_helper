@@ -114,45 +114,73 @@ class TumblbugCrawler:
                     #print(url)
     #driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         #conn.close()
+    """
     def goToCommunityTab(self):
         self.driver.find_element_by_xpath('//*[@id="contentsNavigation"]/nav/div/div/a[2]').click()
         self.driver.implicitly_wait(30)
 
         #html = self.driver.page_source
         #soup = BeautifulSoup(html, 'html.parser')
+    """
+    #https://tumblbug.com/abcfrancais/story?ref=discover    #스토리 탭 눌렀을때.
+    #https://tumblbug.com/abcfrancais/community?ref=discover
 
-    def getuserinfo(self):
-        #self.driver.getUrl()
-        sub_html = self.driver.page_source
+    #https://tumblbug.com/ink?ref=discover  #기본 페이지.
+    #https://tumblbug.com/ink/community?ref=discover
+    def getuserinfo(self, url, title):
+        conn = self.conn
+        curs = conn.cursor()
+        #https://tumblbug.com/planner101?ref=discover
+        #https://tumblbug.com/planner101/community?ref=discover
+        print("getuserinfo")
+        url = url.replace("?","/community?")
+        #req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        #response = urlopen(req)
+        self.driver.get(url)
+        #htmlparser = etree.HTMLParser()
+        #tree = etree.parse(response, htmlparser)
+        #projectHost = self.cleansing(projectHost)
+        print("is there any posting?")
+        try:
+            communityPostNum = self.driver.find_element_by_xpath('//*[@id="contentsNavigation"]/nav/div/div/a[2]/span').text
+            self.driver.implicitly_wait(5)
+            print("yes, there are ", end='')
+            print(communityPostNum)
+        except:
+            print("no")
+            return
 
-        sub_soup = BeautifulSoup(sub_html, 'html.parser')
-        sub_html = self.driver.page_source
+        projectHost = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[1]/div/div[2]/a/span').text
 
-        sub_soup = BeautifulSoup(sub_html, 'html.parser')
-        #projectHost = soup.select('#react-view > div.ProjectIntroduction__ProjectIntroductionBackground-sc-1o2ojgb-0.gsZkXT > div > div > div.ProjectIntroduction__ProjectOutline-sc-1o2ojgb-2.jbdzfG > div > div > a')
-        #projectHost = projectHost.get_text()
+        try:    #진행 중인 프로젝트.
+            investment = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/section[1]/div/div[2]/div/div/div[1]').text
+        except : #종료된 프로젝트.
+            investment = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/div[2]/div/div/div[1]').text
 
-        print("Get User Info")
-        communityNum = self.driver.find_element_by_xpath('//*[@id="contentsNavigation"]/nav/div/div/a[2]/span')
-        if communityNum != '' :
+        investment = self.cleansing(investment)
+        investment = re.sub('[^0-9]','',investment)
 
-            while True :
-                try :
-                    i = 2
-                    username_xpath = '//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div[2]/div[' + str(i) + ']/div/div[1]/div/div/div[1]/div/a/div'
-                    username = sef.driver.find_element_by_xpath('username_xpath')
+        for i in range(2, int(communityPostNum)+2):
+            try:
+                user = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div['+str(i)+']/div/div[1]/div/div/div[1]/div/a/div').text
+                print(user,end='')
+                print(investment)
+                if user != projectHost :
+                    sql = "insert into tumblbug_user_info(site, title, username, investment) values ('tumblbug',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
+                    curs.execute(sql)
 
-                    print('username xpath 찾음')
-                    username = username.text.strip()
-                    username = self.cleansing(username)
-                    print('brand:', Brand)
-                    print('username:', username)
-                    i+=1
-                    #if username == Brand :
-                    #    continue
-                time.sleep(1)
             except:
                 continue
+
+            """
+            print(user,end='')
+            print(investment)
+            sql = "insert into tumblbug_user_info(site, title, username, investment) values ('tumblbug',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
+
+            curs.execute(sql)
+            """
+            conn.commit()
+
 
 
     def cleansing(self, text):
@@ -329,8 +357,8 @@ class TumblbugCrawler:
             curs.execute(sql_url)
             conn.commit()
 
-            self.goToCommunityTab()
-            self.getuserinfo()
+            #self.goToCommunityTab()
+            self.getuserinfo(url, title)
 
         conn.close()
 
