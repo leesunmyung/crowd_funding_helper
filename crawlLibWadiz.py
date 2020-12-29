@@ -134,7 +134,6 @@ class WadizCrawler:
 
             while (True):
                 text = re.sub('\n\n', '\n', text)
-                # print(text.count('\n\n'))
                 if text.count('\n\n') == 0:
                     break
 
@@ -203,9 +202,7 @@ class WadizCrawler:
                 conn.commit()
 
             print(i, url)
-            #url = url.get_attribute('href')
-            #print(url)
-        #driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
         conn.close()
 
     def getCrawler(self):
@@ -241,7 +238,7 @@ class WadizCrawler:
             achieve = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[3]/strong/text()')
 
             funding = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[4]/strong/text()')
-            #//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[2]/strong
+
             supporter = tree.xpath('//*[@id="container"]/div[6]/div/div[1]/div[1]/div[1]/div[1]/p[5]/strong/text()')
 
             #likes1 = list(tree.xpath('//*[@id="cntLike"]/text()')[0])
@@ -250,11 +247,7 @@ class WadizCrawler:
             #likes.append(likes1)
             goal = tree.xpath(
                 '//*[@id="container"]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[5]/div/p[1]/text()[2]')
-            #goal = goal[0][:-1]
-            #print(goal)
-            #print('goal=', goal[0])
-            #goal1 = goal[0][:-1]
-            #print('goal1=', goal1)
+
             period = tree.xpath(
                 '//*[@id="container"]/div[6]/div/div[1]/div[2]/div/div/section/div[4]/div/div[5]/div/p[1]/text()[4]')
 
@@ -296,10 +289,7 @@ class WadizCrawler:
             #endate = self.cleansing(endate)
             nowday = now.strftime("%Y-%m-%d")
 
-                # sql3 = "update wadiz_urllist set crawled='DB insert Error' where url=\'%s\'" % (url)
-                # curs.execute(sql3)
-                # conn.commit()
-                # print('first', id, pagename, category, title, achieve, funding, supporter, likes, goal, period, remaining, stdate, endate, dtStr, url)
+
             # url 을 통해 가져온 내용들을 crawl 테이블에 저장한다.
             # id 를 통해
             sql0 = "select count(*) from wadiz_crawl where id = %d and remaining_day=\'%s\'"% (id, remaining)
@@ -389,13 +379,6 @@ class WadizCrawler:
                 self.driver.implicitly_wait(20)
                 print("replaced url: "+replacedUrl)
 
-                #Num = self.driver.find_element_by_xpath('//*[@id="container"]/div[5]/ul/li[6]/a/span')
-                #//*[@id="container"]/div[5]/ul/li[6]/a/span
-                #//*[@id="container"]/div[6]/div/div/div[1]/div[1]/div[1]/p[3]/strong
-                #self.driver.implicitly_wait(30)
-                #supporterNum = Num.text
-                #print(supporterNum)
-                #supporterNum = supporterNum.strip().replace(',', '')
                 print("supporter : ", supporter)
 
 
