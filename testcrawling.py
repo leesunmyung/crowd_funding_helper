@@ -9,7 +9,11 @@ from urllib.request import urlopen
 from lxml import etree
 import pymysql
 from datetime import datetime
+from datetime import timedelta
 import re
+from selenium.webdriver import ActionChains
+from selenium.webdriver.common.keys import Keys
+#import calendar
 
 import sys
 import io
@@ -40,9 +44,8 @@ class TumblbugCrawler:
 
     def getUrlLister(self, page_url, nUrl):
 
-        #chromedriver = 'C:/Users/ljy01/Desktop/chromedriver/chromedriver_win32/chromedriver.exe'
-        #driver = webdriver.Chrome(chromedriver)
         SCROLL_PAUSE_TIME = 4
+        IMPLICITLY_PAUSE_TIME = 120
 
         self.driver.get(page_url)
         time.sleep(SCROLL_PAUSE_TIME)
@@ -50,96 +53,47 @@ class TumblbugCrawler:
         conn = self.conn
         curs = conn.cursor()
 
-        #nUrl을 100개 고정하지 않고, xpath로 프로젝트 개수 가져옴
-        projectNum = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[1]/span')
-        projectNum = projectNum.text
-        nUrl = int(projectNum)
-        print('nUrl : ', nUrl)
-        # Get scroll height
-#        last_height = driver.execute_script("return document.body.scrollHeight")
-        last_height = 0
+        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(SCROLL_PAUSE_TIME)
+        self.driver.execute_script("window.scrollTo( document.body.scrollHeight, document.body.scrollHeight-2000);")
+        time.sleep(SCROLL_PAUSE_TIME)
+        time.sleep(20)
 
-        # Get scroll height
-#        last_height = driver.execute_script("return document.body.scrollHeight")
-        last_height = 0
-
-        while True:
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            #print('down')
-            time.sleep(SCROLL_PAUSE_TIME)
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight-600);")
-            #print('up')
-            time.sleep(SCROLL_PAUSE_TIME)
-            new_height = self.driver.execute_script("return document.body.scrollHeight")
-            if new_height == last_height:
-                break
-            last_height = new_height
-
+        #n_url = 1161
         for i in range(1, nUrl+1):
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div['+str(i)+']/div/div/div[3]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[2]/div/div/div[3]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[3]/div/div/div[3]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[4]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[5]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[6]/div/div/div[3]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[7]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[8]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[9]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[10]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[11]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[12]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[13]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[14]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[15]/div/div/div[2]/a
-            #//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div[16]/div/div/div[2]/a
             try:
                 xpath1 = '//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div['+str(i)+']/div/div/div[2]/a'
                 url = self.driver.find_element_by_xpath(xpath1)
-                url = url.get_attribute('href')
             except:
                 xpath1 = '//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div['+str(i)+']/div/div/div[3]/a'
                 url = self.driver.find_element_by_xpath(xpath1)
-                url = url.get_attribute('href')
+
+            url = url.get_attribute('href')
             sql0 = "select * from tumblbug_urllist where url=\'%s\'" % (url)
             curs.execute(sql0)
             rows = curs.fetchall()
             status = 'F'
+
+
+
             if len(rows)==0:
                 sql= "insert into tumblbug_urllist(url, crawled) values (\'%s\',\'%s\')"%(url,status)
                 curs.execute(sql)
                 conn.commit()
 
                 print(i,url)
-                    #url = url.get_attribute('href')
-                    #print(url)
-    #driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        #conn.close()
-    """
-    def goToCommunityTab(self):
-        self.driver.find_element_by_xpath('//*[@id="contentsNavigation"]/nav/div/div/a[2]').click()
-        self.driver.implicitly_wait(30)
 
-        #html = self.driver.page_source
-        #soup = BeautifulSoup(html, 'html.parser')
-    """
-    #https://tumblbug.com/abcfrancais/story?ref=discover    #스토리 탭 눌렀을때.
-    #https://tumblbug.com/abcfrancais/community?ref=discover
 
-    #https://tumblbug.com/ink?ref=discover  #기본 페이지.
-    #https://tumblbug.com/ink/community?ref=discover
     def getuserinfo(self, url, title):
+        #스크롤 하는 코드 추가.
         conn = self.conn
         curs = conn.cursor()
-        #https://tumblbug.com/planner101?ref=discover
-        #https://tumblbug.com/planner101/community?ref=discover
-        print("getuserinfo")
+
+        print("Get User Info - tumblbug")
         url = url.replace("?","/community?")
-        #req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        #response = urlopen(req)
+
         self.driver.get(url)
-        #htmlparser = etree.HTMLParser()
-        #tree = etree.parse(response, htmlparser)
-        #projectHost = self.cleansing(projectHost)
+
         print("is there any posting?")
         try:
             communityPostNum = self.driver.find_element_by_xpath('//*[@id="contentsNavigation"]/nav/div/div/a[2]/span').text
@@ -150,35 +104,67 @@ class TumblbugCrawler:
             print("no")
             return
 
+        #커뮤니티 숫자가 5 이상이면 스크롤 내려본다.
+        if int(communityPostNum) >= 5 :
+            print('communityPostNum : ', int(communityPostNum))
+            SCROLL_PAUSE_TIME = 2
+            # Get scroll height
+            last_height = self.driver.execute_script("return document.body.scrollHeight")
+
+            while True:
+                # Scroll down to bottom
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+                # Wait to load page
+                time.sleep(SCROLL_PAUSE_TIME)
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight-100);")
+                time.sleep(SCROLL_PAUSE_TIME)
+
+                # Calculate new scroll height and compare with last scroll height
+                new_height = self.driver.execute_script("return document.body.scrollHeight")
+
+                if new_height == last_height:
+                    break
+
+                last_height = new_height
+
         projectHost = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[1]/div/div[2]/a/span').text
-
-        try:    #진행 중인 프로젝트.
-            investment = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/section[1]/div/div[2]/div/div/div[1]').text
-        except : #종료된 프로젝트.
-            investment = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/div[2]/div/div/div[1]').text
-
-        investment = self.cleansing(investment)
-        investment = re.sub('[^0-9]','',investment)
 
         for i in range(2, int(communityPostNum)+2):
             try:
                 user = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[1]/div/div/div/div['+str(i)+']/div/div[1]/div/div/div[1]/div/a/div').text
-                print(user,end='')
-                print(investment)
+                #print(user,end='')
+
                 if user != projectHost :
+                    try :       #진행 중인 프로젝트.
+                        investment = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/section[1]/div/div[2]/div/div/div[1]').text
+                    except :
+                        try :   #진행 중인 프로젝트.('n개 남음' 박스 있음)
+                            investemnt = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[6]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/section[1]/div/div[2]/div/div/div[1]').text
+                        except :
+                            try :   #펀딩 성공[6] or 펀딩무산[6] or 펀딩 중단.
+                                investment = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[6]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/div[2]/div/div/div[1]').text
+                            except :
+                                try :   #펀딩 성공[5] or 펀딩 무산[5].
+                                    investment  = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[5]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/div[2]/div/div/div[1]').text
+                                except :
+                                    #try :   #펀딩 중단.
+                                    #    investment = self.driver.find_element_by_xpath('//*[@id="react-view"]/div[6]/div[1]/div/div[2]/div/div[2]/div/div[3]/div/div/div[2]/div/div/div[1]').text
+                                    #except :
+                                    print("investment 없음")
+                                    return
+
+                    investment = self.cleansing(investment)
+                    investment = re.sub('[^0-9]','',investment)
+                    print(user, investment)
+
                     sql = "insert into tumblbug_user_info(site, title, username, investment) values ('tumblbug',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
                     curs.execute(sql)
-
+                else :
+                    continue
             except:
                 continue
 
-            """
-            print(user,end='')
-            print(investment)
-            sql = "insert into tumblbug_user_info(site, title, username, investment) values ('tumblbug',\'%s\',\'%s\',\'%s\')"%(title, user, investment)
-
-            curs.execute(sql)
-            """
             conn.commit()
 
 
@@ -239,6 +225,7 @@ class TumblbugCrawler:
         return text
 
     def tumblbugCrawler(self):
+        #funding, achieve int형으로 바꾸기.
         conn = self.conn
         curs = conn.cursor()
 
@@ -315,9 +302,27 @@ class TumblbugCrawler:
             # goal
             for i in goal:
                 notsplit = i.text.strip()
-            split1 = notsplit.split("목표 금액인")
-            split2 = split1[1].split('원이')
-            goalmoney = split2[0].replace(",","").replace(" ","")
+
+            split = notsplit.split(' ')
+            if split[2][-1] == '게' or split[2][-1] == '지':  #선물전달 or 펀딩 무산(실패).
+                goalmoney = str(int(int(funding) / (int(achieve)/100)))
+                print('선물 전달 혹은 펀딩 무산 프로젝트의 goal:', goalmoney)
+            elif split[2][-1] == '을' or split[2][-1] == '이' :   #펀딩성공 or 진행중.
+                goalmoney = split[2][:-2].replace(",", "")
+                print('펀딩 성공 혹은 진행중 프로젝트의 goal:', goalmoney)
+            elif split[2][-1] == '의' :  #펀딩 중단.
+                sql_del = "delete tumblbug_urllist set where id = %d"%id
+                sql_up = "update tumblbug_urllist set id = id-1 where id >= %d"%(id)
+                curs.execute(sql_del)
+                conn.commit()
+                curs.execute(sql_up)
+
+                conn.commit()
+                continue
+
+            #split1 = notsplit.split("목표 금액인")
+            #split2 = split1[1].split('원이')
+            #goalmoney = split2[0].replace(",","").replace(" ","")
 
             #remaining
             for i in remain_day:
@@ -328,7 +333,33 @@ class TumblbugCrawler:
                 remaining = remaining[:-1]
 
             #endate - 수작업
-            endate = "tobe"
+            #펀딩 진행중인 프로젝트에서는 오늘 날짜에 remaining_day 더해 구한다.
+            if int(remaining) >= 1 :
+                now = datetime.now()
+                endate = now + timedelta(days=int(remaining))
+                endate = endate.strftime("%Y-%m-%d")
+                #endate= self.cleansing(endate) #cleansing 하면 대쉬(-) 사라짐.
+                print(endate)
+
+            #펀딩 성공한 프로젝트에서는 회색 상자에서 가져온다.
+            elif split[2][-1] == '을' :
+                endate = ''.join(split[4:7])
+                print(endate)   #2021년1월1일에
+                #endate = endate.replace(' ', '')
+                endate = endate.replace('에', '')
+                endate = endate.replace('일', '')
+                endate = endate.replace('년', '-')
+                endate = endate.replace('월', '-')
+                #2021-1-1
+                if endate[6] == '-' :
+                    #5자리에 0넣기. #2021-01-1
+                    endate = endate[:5] + '0' + endate[5:]
+                if len(endate) == 9 :
+                    #8자리에 0넣기
+                    endate = endate[:8] + '0' + endate[8:]
+                print(endate)
+            else :
+                endate = "tobe"
 
             pagename = self.cleansing(pagename)
             category = self.cleansing(category)
@@ -339,60 +370,48 @@ class TumblbugCrawler:
             supporter= self.cleansing(supporter)
             goalmoney= self.cleansing(goalmoney)
             remaining= self.cleansing(remaining)
-            endate= self.cleansing(endate)
+            #endate= self.cleansing(endate)
 
 
             print("success2\n")
 
             sql1 = 'insert into tumblbug_crawl (id, pagename, category, title, brand, achieve, funding, supporter, goal,remaining_day, endate)\
-                                                    values(%d,\'%s\',\'%s\',\'%s\',\'%s\', \'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
-                                                        %(id, pagename, category, title, Brand, achieve, funding, supporter, goalmoney, remaining, endate)
+                                                values(%d,\'%s\',\'%s\',\'%s\',\'%s\', \'%s\',\'%s\',\'%s\',\'%s\',\'%s\',\'%s\')'\
+                                                    %(id, pagename, category, title, Brand, achieve, funding, supporter, goalmoney, remaining, endate)
             curs.execute(sql1)
             conn.commit()
+
             print("success3\n")
             print('Crawling '+url+' finish',sql1)
 
             conn.commit()
-            sql_url = "update tumblbug_urllist set status='펀딩중', crawled='T' where url=\'%s\'"% (url)  #where id -> where url
-            curs.execute(sql_url)
-            conn.commit()
 
-            #self.goToCommunityTab()
+            if id <= 242 :
+                sql_url = "update tumblbug_urllist set status='펀딩중', crawled='T', brand=\'%s\' where url=\'%s\'"% (Brand, url)  #where id -> where url
+                curs.execute(sql_url)
+                conn.commit()
+            elif id >=243 & id <= 1000 :
+                sql_url = "update tumblbug_urllist set status='펀딩완료', crawled='T', brand=\'%s\' where url=\'%s\'"% (Brand, url)  #where id -> where url
+                curs.execute(sql_url)
+                conn.commit()
+            else :
+                return
+
             self.getuserinfo(url, title)
 
         conn.close()
 
-"""
-        n_scrollDown = nUrl//18+2
-        k=0
-        while k<n_scrollDown+1:
-            k+=1
-            driver.execute_script("window.scrollTo(0,document.body.scrollHeight);")
-            time.sleep(SCROLL_PAUSE_TIME)
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight-100);")
-            time.sleep(SCROLL_PAUSE_TIME)
-            new_height = driver.execute_script("return document.body.scrollHeight")
-            if k == n_scrollDown:
-                break
-            last_height = new_height
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight-100);")
-            print(str(k)+"번 반복했습니다.")
-        while True:
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(SCROLL_PAUSE_TIME)
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight-100);")
-            time.sleep(SCROLL_PAUSE_TIME)
-            new_height = driver.execute_script("return document.body.scrollHeight")
-            if new_height == last_height:
-                break
-            last_height = new_height
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight-100);")
-"""
 
 
 if __name__ == '__main__':
 
-    page_url = 'https://tumblbug.com/discover?ongoing=onGoing&sort=endedAt'
+    #page_url = 'https://tumblbug.com/discover?ongoing=onGoing&sort=endedAt'
+    #page_url = 'https://tumblbug.com/discover?currentMoney=2&sort=publishedAt'  #백만원~천만원, 최신순. 1000개.
+    #page_url = 'https://tumblbug.com/discover?achieveRate=1&currentMoney=2&sort=publishedAt'    #백만원~천만원, 75%이하, 최신순. 100개.
+    #page_url = 'https://tumblbug.com/discover?achieveRate=1&currentMoney=3&sort=publishedAt'    #천만원~오천만원, 75%이하, 최신순. 20개.
+    #page_url = 'https://tumblbug.com/discover?currentMoney=4&sort=publishedAt'   #오천만원~일억원, 최신순. 150개.
+    #page_url = 'https://tumblbug.com/discover?currentMoney=5&sort=publishedAt'   #일억원 이상, 최신순. 60개.
+
     nUrl = 100
     wc = TumblbugCrawler()
     #wc.getUrlLister(page_url, nUrl)
