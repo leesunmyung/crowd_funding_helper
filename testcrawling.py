@@ -22,7 +22,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding = 'utf-8')
 
 class TumblbugCrawler:
     def __init__(self):
-        self.conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='wdta2181',
+        self.conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='0000',
                                db='test', charset='utf8')
 
         #self.path = os.path.dirname(os.path.realpath(__file__))
