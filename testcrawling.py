@@ -22,7 +22,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding = 'utf-8')
 
 class TumblbugCrawler:
     def __init__(self):
-        self.conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='wdta2181',
+        self.conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='0000',
                                db='test', charset='utf8')
 
         #self.path = os.path.dirname(os.path.realpath(__file__))
@@ -166,7 +166,6 @@ class TumblbugCrawler:
                 continue
 
             conn.commit()
-
 
 
     def cleansing(self, text):
@@ -401,6 +400,28 @@ class TumblbugCrawler:
 
         conn.close()
 
+    def getReadyTumblbug(self, page_url, nUrl) :
+        pagename = 'tumblbug'
+        self.driver.get(page_url)
+        time.sleep(20)
+
+        conn = self.conn
+        curs = conn.cursor()
+        
+        #nUrl = 38
+        for i in range(1, nUrl+1):
+            title_xpath = '//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div['+str(i)+']/div/div/dl/dt/a'
+            title = self.driver.find_element_by_xpath(title_xpath).text
+            title = self.cleansing(title)
+
+            category_xpath = '//*[@id="react-view"]/div[3]/div[1]/div[2]/div/div[2]/div['+str(i)+']/div/div/dl/dd[1]/span[1]/a'
+            category = self.driver.find_element_by_xpath(category_xpath).text
+
+            print(title, category)
+
+            sql = "insert into test.ready_title (pagename, category, title) values (\'%s\',\'%s\',\'%s\')"%(pagename, category, title)
+            curs.execute(sql)
+            conn.commit()
 
 
 if __name__ == '__main__':
@@ -411,8 +432,10 @@ if __name__ == '__main__':
     #page_url = 'https://tumblbug.com/discover?achieveRate=1&currentMoney=3&sort=publishedAt'    #천만원~오천만원, 75%이하, 최신순. 20개.
     #page_url = 'https://tumblbug.com/discover?currentMoney=4&sort=publishedAt'   #오천만원~일억원, 최신순. 150개.
     #page_url = 'https://tumblbug.com/discover?currentMoney=5&sort=publishedAt'   #일억원 이상, 최신순. 60개.
+    page_url = 'https://tumblbug.com/discover?ongoing=prelaunching&sort=popular'    #오픈 예정 프로젝트. 인기순 38개.
 
-    nUrl = 100
+    nUrl = 38
     wc = TumblbugCrawler()
     #wc.getUrlLister(page_url, nUrl)
-    wc.tumblbugCrawler()
+    #wc.tumblbugCrawler()
+    wc.getReadyTumblbug(page_url, nUrl)
